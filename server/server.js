@@ -3,6 +3,7 @@ const fileUpload = require('express-fileupload');
 const csv = require('csv-parser');
 const { Readable } = require('stream');
 const cors = require('cors');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const port = 5000;
@@ -14,6 +15,10 @@ app.use(cors());
 app.use(fileUpload({
   createParentPath: true
 }));
+
+const supabaseUrl = "https://rrzipakdeywmmcmykjcc.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyemlwYWtkZXl3bW1jbXlramNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIxMzI0MTEsImV4cCI6MjA1NzcwODQxMX0.PX13Nyd1ga4MKfLDgOxy3lglOm2lyEau-JEO9hgpAkw";
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const transformData = (data) => {
   return {
@@ -91,9 +96,28 @@ app.post('/upload', async (req, res) => {
   }
 });
 
-// Endpoint to get scores
-app.get('/scores', (req, res) => {
-  res.json(scores);
+// Endpoint to get scores from multiple tables
+app.get('/scores', async (req, res) => {
+  try {
+    const tables = ['activity', 'players', 'session']; 
+    const results = {};
+
+    for (const table of tables) {
+      const { data, error } = await supabase
+        .from(table)
+        .select('*');
+
+      if (error) {
+        return res.status(500).send(error.message);
+      }
+
+      results[table] = data;
+    }
+
+    res.json(results);
+  } catch (err) {
+    res.status(500).send(err.toString());
+  }
 });
 
 app.get('/', (req, res) => {
