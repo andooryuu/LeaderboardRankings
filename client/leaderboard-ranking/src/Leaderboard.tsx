@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import "./Leaderboard.css"; // Import the CSS file
 
 interface LeaderboardProps {
   uploadSuccess: boolean;
@@ -35,24 +36,157 @@ interface Score {
   visualCue13: number;
 }
 
-function Leaderboard({ uploadSuccess }: LeaderboardProps) {
-  const [scores, setScores] = useState([]);
-  console.log("uploadSuccess prop:", uploadSuccess);
-  useEffect(() => {
-    const fetchScores = async () => {
-      if (uploadSuccess) {
-        const response = await fetch("http://localhost:5000/scores");
-        const data = await response.json();
-        setScores(data);
-      }
-    };
+function Leaderboard() {
+  const [activities, setActivities] = useState([
+    {
+      id: 1,
+      activityName: "LA ZONE TEST",
+      activityTime: "12:11:21",
+      activityDate: "2024-09-21",
+      activityDuration: 11,
+      playerName: "AOD23",
+      avgReactionTime: 753,
+      totalHits: 13,
+      totalMissHits: 0,
+      durationtype: "seconds",
+      cycleDuration: "10",
+      lightlogic: "random",
+      stationNumber: 1,
+      cycleNumber: 1,
+      repetitions: 1,
+      totalStrikes: 0
+    },
+    {
+      id: 2,
+      activityName: "LA ZONE TEST",
+      activityTime: "12:10:26",
+      activityDate: "2024-09-21",
+      activityDuration: 12,
+      playerName: "AOD23",
+      avgReactionTime: 845,
+      totalHits: 13,
+      totalMissHits: 0,
+      durationtype: "seconds",
+      cycleDuration: "10",
+      lightlogic: "random",
+      stationNumber: 1,
+      cycleNumber: 1,
+      repetitions: 1,
+      totalStrikes: 0
+    },
+    {
+      id: 3,
+      activityName: "LA ZONE TEST",
+      activityTime: "12:09:54",
+      activityDate: "2024-09-21",
+      activityDuration: 13,
+      playerName: "AOD23",
+      avgReactionTime: 930,
+      totalHits: 13,
+      totalMissHits: 0,
+      durationtype: "seconds",
+      cycleDuration: "10",
+      lightlogic: "random",
+      stationNumber: 1,
+      cycleNumber: 1,
+      repetitions: 1,
+      totalStrikes: 0
+    },
+    {
+      id: 4,
+      activityName: "RAPID FIRE",
+      activityTime: "12:09:22",
+      activityDate: "2024-09-21",
+      activityDuration: 14,
+      playerName: "SNP45",
+      avgReactionTime: 626,
+      totalHits: 15,
+      totalMissHits: 2,
+      durationtype: "seconds",
+      cycleDuration: "10",
+      lightlogic: "random",
+      stationNumber: 1,
+      cycleNumber: 1,
+      repetitions: 1,
+      totalStrikes: 0
+    },
+    {
+      id: 5,
+      activityName: "RAPID FIRE",
+      activityTime: "12:06:22",
+      activityDate: "2024-09-21",
+      activityDuration: 14,
+      playerName: "GHT77",
+      avgReactionTime: 569,
+      totalHits: 14,
+      totalMissHits: 1,
+      durationtype: "seconds",
+      cycleDuration: "10",
+      lightlogic: "random",
+      stationNumber: 1,
+      cycleNumber: 1,
+      repetitions: 1,
+      totalStrikes: 0
+    },
+    {
+      id: 6,
+      activityName: "PRECISION SHOT",
+      activityTime: "12:05:52",
+      activityDate: "2024-09-21",
+      activityDuration: 15,
+      playerName: "KLM90",
+      avgReactionTime: 857,
+      totalHits: 12,
+      totalMissHits: 0,
+      durationtype: "seconds",
+      cycleDuration: "10",
+      lightlogic: "random",
+      stationNumber: 1,
+      cycleNumber: 1,
+      repetitions: 1,
+      totalStrikes: 0
+    },
+    {
+      id: 7,
+      activityName: "PRECISION SHOT",
+      activityTime: "12:03:56",
+      activityDate: "2024-09-21",
+      activityDuration: 10,
+      playerName: "XYZ12",
+      avgReactionTime: 593,
+      totalHits: 11,
+      totalMissHits: 3,
+      durationtype: "seconds",
+      cycleDuration: "10",
+      lightlogic: "random",
+      stationNumber: 1,
+      cycleNumber: 1,
+      repetitions: 1,
+      totalStrikes: 0
+    }
+  ]);
 
-    fetchScores();
-  }, [uploadSuccess]); // Trigger useEffect when uploadSuccess changes
+  const [selectedActivity, setSelectedActivity] = useState<string>("ALL");
+
+  const handleActivityChange = (activity: string) => {
+    setSelectedActivity(activity);
+  };
+
+  const filteredActivities = selectedActivity === "ALL"
+    ? activities
+    : activities.filter(activity => activity.activityName === selectedActivity);
 
   return (
-    <div>
+    <div className="container">
       <h1>Leaderboard Ranking</h1>
+      <div className="activity-toggle">
+        <button onClick={() => handleActivityChange("ALL")}>All</button>
+        <button onClick={() => handleActivityChange("LA ZONE TEST")}>LA ZONE TEST</button>
+      
+        <button onClick={() => handleActivityChange("RAPID FIRE")}>RAPID FIRE</button>
+        <button onClick={() => handleActivityChange("PRECISION SHOT")}>PRECISION SHOT</button>
+      </div>
+      
       <table>
         <thead>
           <tr>
@@ -74,23 +208,23 @@ function Leaderboard({ uploadSuccess }: LeaderboardProps) {
           </tr>
         </thead>
         <tbody>
-          {scores.map((score: Score, index: number) => (
-            <tr key={index}>
-              <td>{score.playerName}</td>
-              <td>{score.activityDate}</td>
-              <td>{score.activityTime}</td>
-              <td>{score.activityName}</td>
-              <td>{score.durationtype}</td>
-              <td>{score.cycleDuration}</td>
-              <td>{score.activityDuration}</td>
-              <td>{score.lightlogic}</td>
-              <td>{score.stationNumber}</td>
-              <td>{score.cycleNumber}</td>
-              <td>{score.avgReactionTime}</td>
-              <td>{score.totalHits}</td>
-              <td>{score.totalMissHits}</td>
-              <td>{score.totalStrikes}</td>
-              <td>{score.repetitions}</td>
+          {filteredActivities.map((activity, index) => (
+            <tr key={activity.id}>
+              <td data-label="Player Name">{activity.playerName}</td>
+              <td data-label="Activity Date">{activity.activityDate}</td>
+              <td data-label="Activity Time">{activity.activityTime}</td>
+              <td data-label="Activity Name">{activity.activityName}</td>
+              <td data-label="Duration Type">{activity.durationtype}</td>
+              <td data-label="Cycle Duration">{activity.cycleDuration}</td>
+              <td data-label="Activity Duration">{activity.activityDuration}</td>
+              <td data-label="Light Logic">{activity.lightlogic}</td>
+              <td data-label="Station Number">{activity.stationNumber}</td>
+              <td data-label="Cycle Number">{activity.cycleNumber}</td>
+              <td data-label="Avg Reaction Time">{activity.avgReactionTime}</td>
+              <td data-label="Total Hits">{activity.totalHits}</td>
+              <td data-label="Total Miss Hits">{activity.totalMissHits}</td>
+              <td data-label="Total Strikes">{activity.totalStrikes}</td>
+              <td data-label="Repetitions">{activity.repetitions}</td>
             </tr>
           ))}
         </tbody>

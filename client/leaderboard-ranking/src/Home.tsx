@@ -1,7 +1,7 @@
 import React from "react";
 import { Container, Row, Col, Button, Form, InputGroup } from "react-bootstrap";
 import { Link, useNavigate } from "react-router-dom";
-import { FaSearch, FaTrophy, FaChartLine } from "react-icons/fa";
+import { FaSearch, FaTrophy, FaChartLine, FaFileUpload } from "react-icons/fa";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./HomePage.css";
 
@@ -47,6 +47,18 @@ const HomePage: React.FC = () => {
                 <Button variant="outline-light" className="w-100 py-3">
                   <FaTrophy className="me-2" size={20} />
                   View Leaderboard
+                </Button>
+              </Link>
+            </Col>
+          </Row>
+          
+          {/* TODO: Only site owner sees this button*/}
+          <Row className="feature-buttons justify-content-center">
+            <Col xs={12} md={6} className="mb-3">
+              <Link to="/upload">
+                <Button variant="outline-light" className="w-100 py-3">
+                  <FaFileUpload className="me-2" size={20} />
+                  Upload
                 </Button>
               </Link>
             </Col>
