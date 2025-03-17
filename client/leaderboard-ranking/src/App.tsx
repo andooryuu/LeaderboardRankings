@@ -19,12 +19,11 @@ function App() {
       <div className="app-container">
         <NavBar />
         <Routes>
-          
           {<Route path="/" element={<HomePage />} />}
           <Route path="/test" element={<Test />} />
           <Route path="/stats/:username" element={<StatsPage />} />
-          <Route path="/leaderboard" element={<Leaderboard />}/>
-          <Route path="/upload" element={<Upload />}/>
+          <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/upload" element={<Upload />} />
         </Routes>
       </div>
     </Router>

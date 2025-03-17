@@ -51,7 +51,7 @@ const HomePage: React.FC = () => {
               </Link>
             </Col>
           </Row>
-          
+
           {/* TODO: Only site owner sees this button*/}
           <Row className="feature-buttons justify-content-center">
             <Col xs={12} md={6} className="mb-3">

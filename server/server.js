@@ -99,7 +99,7 @@ app.post('/upload', async (req, res) => {
 // Endpoint to get scores from multiple tables
 app.get('/scores', async (req, res) => {
   try {
-    const tables = ['activity', 'players', 'session']; 
+    const tables = ['activity', 'players', 'session','session_activity']; 
     const results = {};
 
     for (const table of tables) {
