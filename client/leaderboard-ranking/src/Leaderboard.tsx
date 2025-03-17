@@ -231,10 +231,12 @@ function Leaderboard() {
                           {medalIcon ? (
                             <div className="d-flex align-items-center">
                               {medalIcon}
-                              <span className="ms-2">{index + 1}</span>
+                              <span>{index + 1}</span>
                             </div>
                           ) : (
-                            index + 1
+                            <div className="d-flex align-items-center">
+                              <span className="ms-4">{index + 1}</span>
+                            </div>
                           )}
                         </td>
                         <td className="fw-bold">{score.username}</td>
