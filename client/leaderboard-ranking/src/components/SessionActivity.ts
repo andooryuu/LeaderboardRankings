@@ -3,3 +3,4 @@ interface SessionActivity {
     activity_id: number;
     id: number;
   }
+  export default SessionActivity;
