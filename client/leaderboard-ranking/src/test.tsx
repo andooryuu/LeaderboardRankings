@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 function Test() {
   const [data, setData] = useState([]);
   useEffect(() => {
-    fetch("http://localhost:5000/scores")
+    fetch(`http://localhost:5000/player/quickdraw/activities`)
       .then((res) => {
         return res.json();
       })

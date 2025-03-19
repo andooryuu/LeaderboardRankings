@@ -1,57 +1,13 @@
 import React, { useState, useEffect, act } from "react";
 import { Award } from "lucide-react";
+import SessionActivity from "./components/SessionActivity";
+import Score from "./components/Score";
+import Activity from "./components/Activity";
+import Session from "./components/Session";
+import Player from "./components/Player";
 
 interface LeaderboardProps {
   uploadSuccess: boolean;
-}
-
-interface Score {
-  id: number;
-  session_id: number;
-  activity_date: string;
-  activity_time: string;
-  activity_name: string;
-  duration_type: string;
-  activity_duration: string;
-  light_logic: string;
-  station_number: number;
-  player_id: number;
-  username: string;
-  avg_react_time: number;
-  total_hits: number;
-  total_miss_hits: number;
-  total_strikes: number;
-  levels: string;
-  steps: string;
-}
-interface Activity {
-  activity_id: number;
-  activity_name: string;
-  activity_time: string;
-  activity_date: string;
-  activity_duration: number;
-  light_logic: string;
-}
-interface SessionActivity {
-  session_id: number;
-  activity_id: number;
-  id: number;
-}
-interface Player {
-  player_id: number;
-  username: string;
-}
-interface Session {
-  session_id: number;
-  station_number: number;
-  player_id: number;
-  avg_react_time: number;
-  total_hits: number;
-  total_miss_hits: number;
-  total_strikes: number;
-  levels: number;
-  steps: number;
-  duration_type: string;
 }
 
 function Leaderboard() {
@@ -75,7 +31,7 @@ function Leaderboard() {
         const data = await response.json();
 
         // Store the data locally first
-        const playersData = data.players;
+        const playersData = data.player;
         const activitiesData = data.activity;
         const sessionsData = data.session;
         const sessionActivitiesData = data.session_activity;
