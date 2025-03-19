@@ -1,7 +1,6 @@
 import React from "react";
 import { Navbar, Container, Nav } from "react-bootstrap";
 import { Link, useLocation } from "react-router-dom";
-import "./NavBar.css"; // Import the CSS file
 
 const NavBar: React.FC = () => {
   const location = useLocation();
