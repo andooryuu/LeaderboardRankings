@@ -1,0 +1,122 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
+body {
+  background-color: #222;
+  color: #fff;
+  font-family: 'Roboto', sans-serif; /* Update the font family to match the UI nav bar */
+}
+
+.container {
+  padding: 20px;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #fff;
+  font-size: 2.5em;
+  background-color: #444;
+  padding: 10px 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.activity-toggle {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.activity-toggle button {
+  background-color: #444;
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  margin: 5px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.activity-toggle button:hover {
+  background-color: #555;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+  background-color: #333;
+  color: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 12px;
+  text-align: left;
+}
+
+thead {
+  background-color: #444;
+}
+
+tbody tr:nth-child(even) {
+  background-color: #3a3a3a;
+}
+
+tbody tr:hover {
+  background-color: #555;
+}
+
+.gold {
+  border: 2px solid gold;
+  border-radius: 8px;
+}
+
+.silver {
+  border: 2px solid silver;
+  border-radius: 8px;
+}
+
+.bronze {
+  border: 2px solid #cd7f32;
+  border-radius: 8px;
+}
+
+@media screen and (max-width: 768px) {
+  table, thead, tbody, th, td, tr {
+    display: block;
+  }
+
+  thead tr {
+    display: none;
+  }
+
+  tr {
+    margin-bottom: 15px;
+    border-radius: 8px;
+    padding: 10px;
+    background-color: #333;
+  }
+
+  td {
+    text-align: right;
+    padding-left: 50%;
+    position: relative;
+  }
+
+  td:last-child {
+    border-bottom: none;
+  }
+
+  td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 0;
+    width: 50%;
+    padding-left: 15px;
+    font-weight: bold;
+    text-align: left;
+    color: #ccc;
+  }
+}

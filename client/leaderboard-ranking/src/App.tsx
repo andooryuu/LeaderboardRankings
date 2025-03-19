@@ -6,7 +6,12 @@ import HomePage from "./Home";
 import StatsPage from "./StatsPage";
 //import LeaderboardPage from "./components/LeaderboardPage";
 import NavBar from "./NavBar";
+import Leaderboard from "./Leaderboard";
+import { Home, Upload } from "lucide-react";
 //import Footer from "./components/Footer";
+
+import test from "./test";
+import Test from "./test";
 
 function App() {
   return (
@@ -15,7 +20,10 @@ function App() {
         <NavBar />
         <Routes>
           {<Route path="/" element={<HomePage />} />}
+          <Route path="/test" element={<Test />} />
           <Route path="/stats/:username" element={<StatsPage />} />
+          <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/upload" element={<Upload />} />
         </Routes>
       </div>
     </Router>

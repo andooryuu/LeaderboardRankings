@@ -9,6 +9,7 @@ import {
 } from "react-bootstrap";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { FaSearch } from "react-icons/fa";
+import "./NavBar.css"; // Import the CSS file
 
 const NavBar: React.FC = () => {
   const [searchQuery, setSearchQuery] = React.useState("");

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Clock, Target, Award } from "lucide-react";
+import { ArrowLeft, Clock, Target, Award, AlertCircle } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -11,158 +11,199 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import "bootstrap/dist/css/bootstrap.min.css";
+import Session from "./components/Session";
+import Activity from "./components/Activity";
+import Player from "./components/Player";
+import SessionActivity from "./components/SessionActivity";
 
-// Define interface for session data
 interface SessionData {
-  sessionId: number;
-  date: string;
-  time: string;
-  avgReactionTime: number;
-  activityDuration: number;
-  totalStrikes: number;
-  totalMiss: number;
+  session_id: number;
+  activity_date: string;
+  activity_time: string;
+  avg_react_time: number;
+  activity_duration: number;
+  total_strikes: number;
+  total_miss_hits: number;
 }
 
 // Define interface for user data
 interface UserData {
   username: string;
-  totalSessions: number;
+  total_sessions: number;
   bestReactionTime: number;
   avgReactionTime: number;
-  sessionHistory: SessionData[];
+  sessionHistory: DisplaySession[];
 }
 
-const StatsPage: React.FC = () => {
-  const [userData, setUserData] = useState<UserData | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const navigate = useNavigate();
-  const { username: urlUsername } = useParams<{ username: string }>();
+interface DisplaySession {
+  session_id: number;
+  station_number: number;
+  avg_react_time: number;
+  total_hits: number;
+  total_miss_hits: number;
+  total_strikes: number;
+  // Include array of activities
+  activities: {
+    activity_id: number;
+    activity_name: string;
+    activity_date: string;
+    activity_time: string;
+    activity_duration: number;
+  }[];
+}
 
+function StatsPage() {
+  const [loading, setLoading] = useState<boolean>(true);
+  const [activityData, setActivityData] = useState<Activity[]>([]);
+  const [playerData, setPlayerData] = useState<Player>();
+  const [sessionTempData, setSessionTempData] = useState<Session[]>([]);
+  const [sessionActivityData, setSessionActivityData] = useState<
+    SessionActivity[]
+  >([]);
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [notFound, setNotFound] = useState<boolean>(false);
+  const navigate = useNavigate();
+  const { username } = useParams<{ username: string }>();
   useEffect(() => {
     // Get username from URL params or use default
-    const user = urlUsername || "AOD23";
+    const fetchUserData = async () => {
+      try {
+        const userData = await fetch(
+          `http://localhost:5000/player/${username}/activities`
+        );
+        const data = await userData.json();
 
-    // Simulate fetching data
-    setTimeout(() => {
-      // This would be an API call in a real app
-      const mockUserData: UserData = {
-        username: user,
-        totalSessions: 47,
-        bestReactionTime: 684, // ms
-        avgReactionTime: 2390, // ms
-        sessionHistory: processCSVData(),
-      };
-      setUserData(mockUserData);
-      setLoading(false);
-    }, 1000);
-  }, [urlUsername]);
+        const playersData = data.player;
+        const activitiesData = data.activities;
+        const sessionsData = data.sessions;
+        const sessionActivitiesData = data.session_activities;
 
-  // Function to process the CSV data
-  const processCSVData = (): SessionData[] => {
-    // This would process the actual CSV data in a real app
-    // For now, using sample data based on the provided CSV
-    return [
-      {
-        sessionId: 1,
-        date: "2024-09-21",
-        time: "12:11:21",
-        avgReactionTime: 753,
-        activityDuration: 11,
-        totalStrikes: 0,
-        totalMiss: 0,
-      },
-      {
-        sessionId: 2,
-        date: "2024-09-21",
-        time: "12:10:26",
-        avgReactionTime: 845,
-        activityDuration: 12,
-        totalStrikes: 0,
-        totalMiss: 0,
-      },
-      {
-        sessionId: 3,
-        date: "2024-09-21",
-        time: "12:09:54",
-        avgReactionTime: 930,
-        activityDuration: 13,
-        totalStrikes: 0,
-        totalMiss: 0,
-      },
-      {
-        sessionId: 4,
-        date: "2024-09-21",
-        time: "12:09:22",
-        avgReactionTime: 1026,
-        activityDuration: 14,
-        totalStrikes: 0,
-        totalMiss: 0,
-      },
-      {
-        sessionId: 5,
-        date: "2024-09-21",
-        time: "12:06:22",
-        avgReactionTime: 969,
-        activityDuration: 14,
-        totalStrikes: 0,
-        totalMiss: 0,
-      },
-      {
-        sessionId: 6,
-        date: "2024-09-21",
-        time: "12:05:52",
-        avgReactionTime: 1057,
-        activityDuration: 15,
-        totalStrikes: 0,
-        totalMiss: 0,
-      },
-      {
-        sessionId: 7,
-        date: "2024-09-21",
-        time: "12:03:56",
-        avgReactionTime: 693,
-        activityDuration: 10,
-        totalStrikes: 0,
-        totalMiss: 0,
-      },
-      {
-        sessionId: 8,
-        date: "2024-09-21",
-        time: "12:00:42",
-        avgReactionTime: 741,
-        activityDuration: 11,
-        totalStrikes: 0,
-        totalMiss: 0,
-      },
-      {
-        sessionId: 9,
-        date: "2024-09-21",
-        time: "11:58:00",
-        avgReactionTime: 1370,
-        activityDuration: 19,
-        totalStrikes: 0,
-        totalMiss: 0,
-      },
-      {
-        sessionId: 10,
-        date: "2024-09-21",
-        time: "11:57:17",
-        avgReactionTime: 1012,
-        activityDuration: 14,
-        totalStrikes: 0,
-        totalMiss: 0,
-      },
-    ]; // No need to reverse, keep in ascending order
-  };
+        setPlayerData(playersData);
+        setActivityData(activitiesData);
+        setSessionTempData(sessionsData);
+        setSessionActivityData(sessionActivitiesData);
 
-  // Calculate score based on the formula provided
-  const calculateScore = (session: SessionData): number => {
+        let displaySessions: DisplaySession[] = [];
+
+        for (let i = 0; i < sessionActivitiesData.length; i++) {
+          let sessionActivity = sessionActivitiesData[i];
+
+          const session = sessionsData.find(
+            (session: Session) =>
+              session.session_id === sessionActivity.session_id
+          );
+
+          // Skip this iteration if the session is not found
+          if (!session) {
+            console.warn(
+              `Session with ID ${sessionActivity.session_id} not found`
+            );
+            continue;
+          }
+
+          const activities = activitiesData.filter(
+            (activity: Activity) =>
+              activity.activity_id === sessionActivity.activity_id
+          );
+
+          let displaySession: DisplaySession = {
+            session_id: sessionActivity.session_id,
+            station_number: session.station_number,
+            avg_react_time: session.avg_react_time,
+            total_hits: session.total_hits,
+            total_miss_hits: session.total_miss_hits,
+            total_strikes: session.total_strikes,
+            activities: activities,
+          };
+
+          displaySessions.push(displaySession);
+        }
+
+        // Calculate stats for user data
+        const bestReactionTime =
+          sessionsData.length > 0
+            ? Math.min(...sessionsData.map((s: Session) => s.avg_react_time))
+            : 0;
+        const avgReactionTime =
+          sessionsData.length > 0
+            ? sessionsData.reduce(
+                (sum: number, s: Session) => sum + s.avg_react_time,
+                0
+              ) / sessionsData.length
+            : 0;
+
+        const userData1: UserData = {
+          username: playersData.username,
+          total_sessions: sessionsData.length,
+          bestReactionTime,
+          avgReactionTime,
+          sessionHistory: displaySessions,
+        };
+
+        setUserData(userData1);
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+        setNotFound(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [username]);
+
+  const calculateScore = (session: DisplaySession): number => {
+    const totalDuration = session.activities.reduce(
+      (sum, act) => sum + act.activity_duration,
+      0
+    );
+
     return (
-      session.activityDuration +
-      10 * session.totalStrikes +
-      15 * session.totalMiss
+      totalDuration + 10 * session.total_strikes + 15 * session.total_miss_hits
     );
   };
+
+  if (notFound) {
+    return (
+      <div className="min-vh-100 d-flex flex-column bg-dark text-light">
+        {/* Back Button */}
+        <div className="container py-4">
+          <button
+            onClick={() => navigate(-1)}
+            className="btn btn-outline-secondary d-inline-flex align-items-center"
+          >
+            <ArrowLeft size={20} className="me-2" />
+            Back
+          </button>
+        </div>
+
+        {/* Not Found Content */}
+        <div className="container flex-grow-1 d-flex flex-column justify-content-center align-items-center text-center py-5">
+          <div className="mb-4">
+            <AlertCircle size={80} className="text-danger" />
+          </div>
+          <h1 className="display-4 fw-bold mb-3">Player Not Found</h1>
+          <p className="lead text-secondary mb-4">
+            We couldn't find any data for this player. Please check the username
+            and try again.
+          </p>
+          <button
+            onClick={() => navigate("/")}
+            className="btn btn-primary btn-lg px-4 py-2"
+          >
+            Return to Homepage
+          </button>
+        </div>
+
+        {/* Footer */}
+        <footer className="bg-black text-center py-4 mt-auto">
+          <p className="text-secondary mb-0">
+            © 2025 Airsoft Tracker | LA ZONE Training System
+          </p>
+        </footer>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -174,7 +215,6 @@ const StatsPage: React.FC = () => {
       </div>
     );
   }
-
   return (
     <div className="min-vh-100 d-flex flex-column bg-dark text-light">
       {/* Back Button */}
@@ -194,7 +234,7 @@ const StatsPage: React.FC = () => {
         <div className="card bg-black text-light border-0 shadow mb-4">
           <div className="card-body p-4">
             <h1 className="card-title display-6 fw-bold mb-4">
-              {userData?.username}'s Performance Stats
+              {username}'s Performance Stats
             </h1>
 
             {/* Stats Summary */}
@@ -213,7 +253,7 @@ const StatsPage: React.FC = () => {
                         Total Sessions
                       </h6>
                       <h3 className="fw-bold mb-0 text-white">
-                        {userData?.totalSessions}
+                        {userData?.sessionHistory.length || 0}
                       </h3>
                     </div>
                   </div>
@@ -234,7 +274,7 @@ const StatsPage: React.FC = () => {
                         Best Reaction Time
                       </h6>
                       <h3 className="fw-bold mb-0 text-white">
-                        {userData?.bestReactionTime} ms
+                        {userData?.bestReactionTime.toFixed(2)} ms
                       </h3>
                     </div>
                   </div>
@@ -255,7 +295,7 @@ const StatsPage: React.FC = () => {
                         Average Reaction Time
                       </h6>
                       <h3 className="fw-bold mb-0 text-white">
-                        {userData?.avgReactionTime} ms
+                        {userData?.avgReactionTime.toFixed(2)} ms
                       </h3>
                     </div>
                   </div>
@@ -272,15 +312,18 @@ const StatsPage: React.FC = () => {
             <div style={{ height: "300px" }}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
-                  data={userData?.sessionHistory}
+                  data={userData?.sessionHistory.map((session) => ({
+                    sessionId: session.session_id,
+                    avgReactionTime: session.avg_react_time,
+                  }))}
                   margin={{ top: 10, right: 30, left: 0, bottom: 10 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#333" />
                   <XAxis
                     dataKey="sessionId"
                     stroke="#aaa"
-                    domain={[1, 10]}
-                    tickCount={userData?.sessionHistory.length}
+                    domain={["dataMin", "dataMax"]}
+                    tickCount={userData?.sessionHistory.length || 5}
                   />
                   <YAxis stroke="#aaa" />
                   <Tooltip
@@ -313,30 +356,63 @@ const StatsPage: React.FC = () => {
               <table className="table table-dark table-hover">
                 <thead>
                   <tr>
+                    <th>Session ID</th>
+                    <th>Station</th>
                     <th>Date</th>
-                    <th>Time</th>
+                    <th>Activities</th>
                     <th>Duration (sec)</th>
                     <th>Avg Reaction (ms)</th>
+                    <th>Hits/Misses</th>
                     <th>Score</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {userData?.sessionHistory.map((session) => (
-                    <tr key={session.sessionId}>
-                      <td>{session.date}</td>
-                      <td>{session.time}</td>
-                      <td>{session.activityDuration}</td>
-                      <td>{session.avgReactionTime}</td>
-                      <td className="fw-bold">{calculateScore(session)}</td>
-                    </tr>
-                  ))}
+                  {userData?.sessionHistory.map((session) => {
+                    // Get the most recent activity date to represent the session date
+                    const mostRecentActivity =
+                      session.activities.length > 0
+                        ? session.activities.sort(
+                            (a, b) =>
+                              new Date(b.activity_date).getTime() -
+                              new Date(a.activity_date).getTime()
+                          )[0]
+                        : null;
+
+                    // Calculate total duration across all activities
+                    const totalDuration = session.activities.reduce(
+                      (sum, act) => sum + act.activity_duration,
+                      0
+                    );
+
+                    return (
+                      <tr key={session.session_id}>
+                        <td>{session.session_id}</td>
+                        <td>{session.station_number}</td>
+                        <td>{mostRecentActivity?.activity_date || "N/A"}</td>
+                        <td>
+                          {session.activities.length > 0
+                            ? session.activities.map((act) => (
+                                <div key={act.activity_id} className="mb-1">
+                                  {act.activity_name}
+                                </div>
+                              ))
+                            : "No activities"}
+                        </td>
+                        <td>{totalDuration}</td>
+                        <td>{session.avg_react_time.toFixed(2)}</td>
+                        <td>
+                          {session.total_hits}/{session.total_miss_hits}
+                        </td>
+                        <td className="fw-bold">{calculateScore(session)}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           </div>
         </div>
       </div>
-
       {/* Footer */}
       <footer className="bg-black text-center py-4 mt-auto">
         <p className="text-secondary mb-0">
@@ -345,6 +421,6 @@ const StatsPage: React.FC = () => {
       </footer>
     </div>
   );
-};
+}
 
 export default StatsPage;

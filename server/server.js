@@ -3,6 +3,7 @@ const fileUpload = require('express-fileupload');
 const csv = require('csv-parser');
 const { Readable } = require('stream');
 const cors = require('cors');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const port = 5000;
@@ -14,6 +15,10 @@ app.use(cors());
 app.use(fileUpload({
   createParentPath: true
 }));
+
+const supabaseUrl = "https://rrzipakdeywmmcmykjcc.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyemlwYWtkZXl3bW1jbXlramNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIxMzI0MTEsImV4cCI6MjA1NzcwODQxMX0.PX13Nyd1ga4MKfLDgOxy3lglOm2lyEau-JEO9hgpAkw";
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const transformData = (data) => {
   return {
@@ -91,9 +96,99 @@ app.post('/upload', async (req, res) => {
   }
 });
 
-// Endpoint to get scores
-app.get('/scores', (req, res) => {
-  res.json(scores);
+app.get('/player/:username/activities', async (req, res) => {
+  const { username } = req.params;
+  
+  try {
+    // First get the player_id for the given username
+    const { data: playerData, error: playerError } = await supabase
+      .from('player')
+      .select('player_id, username')
+      .eq('username', username)
+      .single();
+
+    if (playerError) {
+      console.error('Error fetching player data:', playerError);
+      return res.status(500).json({ error: playerError.message });
+    }
+    
+    if (!playerData) {
+      return res.status(404).json({ error: 'Player not found' });
+    }
+    
+    // Now get sessions for this player
+    const { data: sessionData, error: sessionError } = await supabase
+      .from('session')
+      .select('*')
+      .eq('player_id', playerData.player_id);
+      
+    if (sessionError) {
+      console.error('Error fetching session data:', sessionError);
+      return res.status(500).json({ error: sessionError.message });
+    }
+    
+    // Get session_activity entries for these sessions
+    const sessionIds = sessionData.map(session => session.session_id);
+    
+    const { data: sessionActivityData, error: sessionActivityError } = await supabase
+      .from('session_activity')
+      .select('*')
+      .in('session_id', sessionIds);
+      
+    if (sessionActivityError) {
+      console.error('Error fetching session activity data:', sessionActivityError);
+      return res.status(500).json({ error: sessionActivityError.message });
+    }
+    
+    // Get activity data for these session_activities
+    const activityIds = sessionActivityData.map(sa => sa.activity_id);
+    
+    const { data: activityData, error: activityError } = await supabase
+      .from('activity')
+      .select('*')
+      .in('activity_id', activityIds);
+      
+    if (activityError) {
+      console.error('Error fetching activity data:', activityError);
+      return res.status(500).json({ error: activityError.message });
+    }
+    
+    // Return the data in separated tables format
+    const results = {
+      player: playerData,
+      sessions: sessionData,
+      session_activities: sessionActivityData,
+      activities: activityData
+    };
+    
+    res.json(results);
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+// Endpoint to get scores from multiple tables
+app.get('/scores', async (req, res) => {
+  try {
+    const tables = ['activity', 'player', 'session','session_activity']; 
+    const results = {};
+
+    for (const table of tables) {
+      const { data, error } = await supabase
+        .from(table)
+        .select('*');
+
+      if (error) {
+        return res.status(500).send(error.message);
+      }
+
+      results[table] = data;
+    }
+
+    res.json(results);
+  } catch (err) {
+    res.status(500).send(err.toString());
+  }
 });
 
 app.get('/', (req, res) => {
