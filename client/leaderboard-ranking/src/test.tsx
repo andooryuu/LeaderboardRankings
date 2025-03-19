@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
+import { useEffect } from "react";
 
 function Test() {
-  const [data, setData] = useState([]);
   useEffect(() => {
-    fetch(`http://localhost:5000/player/quickdraw/activities`)
+    fetch(
+      `https://leaderboardrankings-1.onrender.com/player/quickdraw/activities`
+    )
       .then((res) => {
         return res.json();
       })

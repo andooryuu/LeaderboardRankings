@@ -1,25 +1,14 @@
-import React, { useState, useEffect, act } from "react";
+import React, { useState, useEffect } from "react";
 import { Award } from "lucide-react";
-import SessionActivity from "./components/SessionActivity";
 import Score from "./components/Score";
 import Activity from "./components/Activity";
 import Session from "./components/Session";
 import Player from "./components/Player";
 
-interface LeaderboardProps {
-  uploadSuccess: boolean;
-}
-
 function Leaderboard() {
   const [scores, setScores] = useState<Score[]>([]);
   const [loading, setLoading] = useState(true);
-  const [players, setPlayers] = useState<Player[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [sessionActivities, setSessionActivities] = useState<SessionActivity[]>(
-    []
-  );
-  let activityNames: string[] = [];
 
   const [selectedActivity, setSelectedActivity] = useState<string>("ALL");
 
@@ -27,7 +16,9 @@ function Leaderboard() {
     const fetchScores = async () => {
       try {
         setLoading(true);
-        const response = await fetch("http://localhost:5000/scores");
+        const response = await fetch(
+          "https://leaderboardrankings-1.onrender.com/scores"
+        );
         const data = await response.json();
 
         // Store the data locally first
@@ -37,10 +28,7 @@ function Leaderboard() {
         const sessionActivitiesData = data.session_activity;
 
         // Update state variables
-        setPlayers(playersData);
         setActivities(activitiesData);
-        setSessions(sessionsData);
-        setSessionActivities(sessionActivitiesData);
 
         // Build newScores using the local variables, not the state variables
         const newScores: Score[] = [];

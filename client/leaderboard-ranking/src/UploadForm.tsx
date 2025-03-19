@@ -5,13 +5,7 @@ interface UploadFormProps {
 }
 
 const UploadForm = ({ onUploadSuccess }: UploadFormProps) => {
-  const [file, setFile] = useState<File | null>(null);
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files.length > 0) {
-      setFile(event.target.files[0]);
-    }
-  };
+  const [file] = useState<File | null>(null);
 
   const handleUpload = async (event: React.FormEvent) => {
     event.preventDefault();

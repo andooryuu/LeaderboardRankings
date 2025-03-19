@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Clock, Target, Award, AlertCircle } from "lucide-react";
 import {
   LineChart,
@@ -52,7 +52,7 @@ function StatsPage() {
     const fetchUserData = async () => {
       try {
         const userData = await fetch(
-          `http://localhost:5000/player/${username}/activities`
+          `https://leaderboardrankings-1.onrender.com/activities`
         );
         const data = await userData.json();
 

@@ -1,33 +1,15 @@
 import React from "react";
-import {
-  Navbar,
-  Container,
-  Nav,
-  Form,
-  FormControl,
-  Button,
-} from "react-bootstrap";
-import { Link, useNavigate, useLocation } from "react-router-dom";
-import { FaSearch } from "react-icons/fa";
+import { Navbar, Container, Nav } from "react-bootstrap";
+import { Link, useLocation } from "react-router-dom";
 import "./NavBar.css"; // Import the CSS file
 
 const NavBar: React.FC = () => {
-  const [searchQuery, setSearchQuery] = React.useState("");
-  const navigate = useNavigate();
   const location = useLocation();
 
   // Don't show navbar on homepage
   if (location.pathname === "/") {
     return null;
   }
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/stats/${searchQuery}`);
-      setSearchQuery("");
-    }
-  };
 
   return (
     <Navbar

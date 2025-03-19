@@ -1,7 +1,7 @@
 import React from "react";
 import { Container, Row, Col, Button, Form, InputGroup } from "react-bootstrap";
 import { Link, useNavigate } from "react-router-dom";
-import { FaSearch, FaTrophy, FaChartLine, FaFileUpload } from "react-icons/fa";
+import { FaSearch, FaTrophy, FaFileUpload } from "react-icons/fa";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./HomePage.css";
 

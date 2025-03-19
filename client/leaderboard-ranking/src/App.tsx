@@ -1,4 +1,3 @@
-import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./App.css";
@@ -7,10 +6,8 @@ import StatsPage from "./StatsPage";
 //import LeaderboardPage from "./components/LeaderboardPage";
 import NavBar from "./NavBar";
 import Leaderboard from "./Leaderboard";
-import { Home, Upload } from "lucide-react";
+import { Upload } from "lucide-react";
 //import Footer from "./components/Footer";
-
-import test from "./test";
 import Test from "./test";
 
 function App() {
