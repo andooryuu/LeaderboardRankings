@@ -13,18 +13,6 @@ import {
 import "bootstrap/dist/css/bootstrap.min.css";
 import Session from "./components/Session";
 import Activity from "./components/Activity";
-import Player from "./components/Player";
-import SessionActivity from "./components/SessionActivity";
-
-interface SessionData {
-  session_id: number;
-  activity_date: string;
-  activity_time: string;
-  avg_react_time: number;
-  activity_duration: number;
-  total_strikes: number;
-  total_miss_hits: number;
-}
 
 // Define interface for user data
 interface UserData {
@@ -54,12 +42,7 @@ interface DisplaySession {
 
 function StatsPage() {
   const [loading, setLoading] = useState<boolean>(true);
-  const [activityData, setActivityData] = useState<Activity[]>([]);
-  const [playerData, setPlayerData] = useState<Player>();
-  const [sessionTempData, setSessionTempData] = useState<Session[]>([]);
-  const [sessionActivityData, setSessionActivityData] = useState<
-    SessionActivity[]
-  >([]);
+
   const [userData, setUserData] = useState<UserData | null>(null);
   const [notFound, setNotFound] = useState<boolean>(false);
   const navigate = useNavigate();
@@ -77,11 +60,6 @@ function StatsPage() {
         const activitiesData = data.activities;
         const sessionsData = data.sessions;
         const sessionActivitiesData = data.session_activities;
-
-        setPlayerData(playersData);
-        setActivityData(activitiesData);
-        setSessionTempData(sessionsData);
-        setSessionActivityData(sessionActivitiesData);
 
         let displaySessions: DisplaySession[] = [];
 
@@ -189,7 +167,7 @@ function StatsPage() {
           </p>
           <button
             onClick={() => navigate("/")}
-            className="btn btn-primary btn-lg px-4 py-2"
+            className="btn btn-light btn-lg px-4 py-2"
           >
             Return to Homepage
           </button>
