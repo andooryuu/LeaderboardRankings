@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Clock, Target, Award, AlertCircle } from "lucide-react";
 import {
   LineChart,
@@ -11,8 +11,20 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import "bootstrap/dist/css/bootstrap.min.css";
-import Session from "./components/Session";
-import Activity from "./components/Activity";
+import SessionDetails from "./SessionDetails"; // Import the new component
+
+// Define interface for activity data coming from JSON
+interface ActivityData {
+  session_id: number;
+  activity_date: string;
+  activity_time: string;
+  activity_name: string;
+  activity_duration: number;
+  activity_hits: number;
+  activity_miss_hits: number;
+  activity_avg_react_time: number;
+  activity_strikes: number;
+}
 
 // Define interface for user data
 interface UserData {
@@ -30,97 +42,132 @@ interface DisplaySession {
   total_hits: number;
   total_miss_hits: number;
   total_strikes: number;
-  // Include array of activities
-  activities: {
-    activity_id: number;
-    activity_name: string;
-    activity_date: string;
-    activity_time: string;
-    activity_duration: number;
-  }[];
+  session_time: string;
+  session_date: string;
+  duration: number;
+  activities: ActivityData[]; // Store full activity data
 }
 
 function StatsPage() {
   const [loading, setLoading] = useState<boolean>(true);
-
   const [userData, setUserData] = useState<UserData | null>(null);
   const [notFound, setNotFound] = useState<boolean>(false);
+  const [selectedSession, setSelectedSession] = useState<DisplaySession | null>(
+    null
+  );
+  const [showSessionDetails, setShowSessionDetails] = useState<boolean>(false);
   const navigate = useNavigate();
   const { username } = useParams<{ username: string }>();
+
   useEffect(() => {
-    // Get username from URL params or use default
     const fetchUserData = async () => {
       try {
-        const userData = await fetch(
-          `http://localhost:5000/player/${username}/activities`
-        );
-        const data = await userData.json();
+        setLoading(true);
+        // In your real app, this would be a fetch call to your API
+        const response = await fetch(`http://localhost:5000/stats/${username}`);
 
-        const playersData = data.player;
-        const activitiesData = data.activities;
-        const sessionsData = data.sessions;
-        const sessionActivitiesData = data.session_activities;
+        // Check if the response is OK
+        if (!response.ok) {
+          throw new Error("User not found or API error");
+        }
 
-        let displaySessions: DisplaySession[] = [];
+        const activityData = await response.json();
 
-        for (let i = 0; i < sessionActivitiesData.length; i++) {
-          let sessionActivity = sessionActivitiesData[i];
+        // Check if the response contains any activities
+        if (!activityData || activityData.length === 0) {
+          setNotFound(true);
+          setLoading(false);
+          return;
+        }
 
-          const session = sessionsData.find(
-            (session: Session) =>
-              session.session_id === sessionActivity.session_id
-          );
-
-          // Skip this iteration if the session is not found
-          if (!session) {
-            console.warn(
-              `Session with ID ${sessionActivity.session_id} not found`
-            );
-            continue;
+        // Group activities by session_id
+        const sessionMap = new Map<number, ActivityData[]>();
+        activityData.forEach((activity: ActivityData) => {
+          if (!sessionMap.has(activity.session_id)) {
+            sessionMap.set(activity.session_id, []);
           }
+          sessionMap.get(activity.session_id)!.push(activity);
+        });
 
-          const activities = activitiesData.filter(
-            (activity: Activity) =>
-              activity.activity_id === sessionActivity.activity_id
+        // Create session history from grouped activities
+        const displaySessions: DisplaySession[] = [];
+
+        sessionMap.forEach((activities, sessionId) => {
+          // Calculate session averages and totals
+          const totalHits = activities.reduce(
+            (sum, act) => sum + act.activity_hits,
+            0
+          );
+          const totalMissHits = activities.reduce(
+            (sum, act) => sum + act.activity_miss_hits,
+            0
+          );
+          const totalStrikes = activities.reduce(
+            (sum, act) => sum + act.activity_strikes,
+            0
+          );
+          const totalDuration = activities.reduce(
+            (sum, act) => sum + act.activity_duration,
+            0
           );
 
-          let displaySession: DisplaySession = {
-            session_id: sessionActivity.session_id,
-            station_number: session.station_number,
-            avg_react_time: session.avg_react_time,
-            total_hits: session.total_hits,
-            total_miss_hits: session.total_miss_hits,
-            total_strikes: session.total_strikes,
-            activities: activities,
+          // Average reaction time weighted by number of hits
+          const totalHitsForAvg = activities.reduce(
+            (sum, act) => sum + act.activity_hits,
+            0
+          );
+          const weightedReactTime = activities.reduce(
+            (sum, act) => sum + act.activity_avg_react_time * act.activity_hits,
+            0
+          );
+          const avgReactTime =
+            totalHitsForAvg > 0 ? weightedReactTime / totalHitsForAvg : 0;
+
+          // Use the date and time from the first activity in the session
+          const firstActivity = activities[0];
+
+          const displaySession: DisplaySession = {
+            session_id: sessionId,
+            station_number: (sessionId % 5) + 1, // Placeholder: assign a station number based on session ID
+            avg_react_time: avgReactTime,
+            total_hits: totalHits,
+            total_miss_hits: totalMissHits,
+            total_strikes: totalStrikes,
+            session_time: firstActivity.activity_time,
+            session_date: new Date(
+              firstActivity.activity_date
+            ).toLocaleDateString(),
+            duration: totalDuration,
+            activities: activities, // Store full activity data for each session
           };
 
           displaySessions.push(displaySession);
-        }
+        });
 
-        // Calculate stats for user data
+        // Calculate user stats
         const bestReactionTime =
-          sessionsData.length > 0
-            ? Math.min(...sessionsData.map((s: Session) => s.avg_react_time))
-            : 0;
-        const avgReactionTime =
-          sessionsData.length > 0
-            ? sessionsData.reduce(
-                (sum: number, s: Session) => sum + s.avg_react_time,
-                0
-              ) / sessionsData.length
+          displaySessions.length > 0
+            ? Math.min(...displaySessions.map((s) => s.avg_react_time))
             : 0;
 
-        const userData1: UserData = {
-          username: playersData.username,
-          total_sessions: sessionsData.length,
+        const avgReactionTime =
+          displaySessions.length > 0
+            ? displaySessions.reduce((sum, s) => sum + s.avg_react_time, 0) /
+              displaySessions.length
+            : 0;
+
+        // Create user data object
+        const userData: UserData = {
+          username: username || "Player",
+          total_sessions: displaySessions.length,
           bestReactionTime,
           avgReactionTime,
           sessionHistory: displaySessions,
         };
 
-        setUserData(userData1);
+        setUserData(userData);
       } catch (error) {
-        console.error("Error fetching user data:", error);
+        console.error("Error processing user data:", error);
         setNotFound(true);
       } finally {
         setLoading(false);
@@ -131,14 +178,22 @@ function StatsPage() {
   }, [username]);
 
   const calculateScore = (session: DisplaySession): number => {
-    const totalDuration = session.activities.reduce(
-      (sum, act) => sum + act.activity_duration,
-      0
-    );
-
     return (
-      totalDuration + 10 * session.total_strikes + 15 * session.total_miss_hits
+      session.duration +
+      10 * session.total_strikes +
+      15 * session.total_miss_hits
     );
+  };
+
+  const handleSessionClick = (session: DisplaySession) => {
+    setSelectedSession(session);
+    setShowSessionDetails(true);
+    console.log("Session selected:", session);
+  };
+
+  const handleBackToStats = () => {
+    setShowSessionDetails(false);
+    setSelectedSession(null);
   };
 
   if (notFound) {
@@ -193,6 +248,14 @@ function StatsPage() {
       </div>
     );
   }
+
+  // Show the SessionDetails component if a session is selected
+  if (showSessionDetails && selectedSession) {
+    return (
+      <SessionDetails session={selectedSession} onBack={handleBackToStats} />
+    );
+  }
+
   return (
     <div className="min-vh-100 d-flex flex-column bg-dark text-light">
       {/* Back Button */}
@@ -336,8 +399,6 @@ function StatsPage() {
                   <tr>
                     <th>Session ID</th>
                     <th>Station</th>
-                    <th>Date</th>
-                    <th>Activities</th>
                     <th>Duration (sec)</th>
                     <th>Avg Reaction (ms)</th>
                     <th>Hits/Misses</th>
@@ -345,52 +406,30 @@ function StatsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {userData?.sessionHistory.map((session) => {
-                    // Get the most recent activity date to represent the session date
-                    const mostRecentActivity =
-                      session.activities.length > 0
-                        ? session.activities.sort(
-                            (a, b) =>
-                              new Date(b.activity_date).getTime() -
-                              new Date(a.activity_date).getTime()
-                          )[0]
-                        : null;
-
-                    // Calculate total duration across all activities
-                    const totalDuration = session.activities.reduce(
-                      (sum, act) => sum + act.activity_duration,
-                      0
-                    );
-
-                    return (
-                      <tr key={session.session_id}>
-                        <td>{session.session_id}</td>
-                        <td>{session.station_number}</td>
-                        <td>{mostRecentActivity?.activity_date || "N/A"}</td>
-                        <td>
-                          {session.activities.length > 0
-                            ? session.activities.map((act) => (
-                                <div key={act.activity_id} className="mb-1">
-                                  {act.activity_name}
-                                </div>
-                              ))
-                            : "No activities"}
-                        </td>
-                        <td>{totalDuration}</td>
-                        <td>{session.avg_react_time.toFixed(2)}</td>
-                        <td>
-                          {session.total_hits}/{session.total_miss_hits}
-                        </td>
-                        <td className="fw-bold">{calculateScore(session)}</td>
-                      </tr>
-                    );
-                  })}
+                  {userData?.sessionHistory.map((session) => (
+                    <tr
+                      key={session.session_id}
+                      onClick={() => handleSessionClick(session)}
+                      style={{ cursor: "pointer" }}
+                      className="session-row"
+                    >
+                      <td>{session.session_id}</td>
+                      <td>{session.station_number}</td>
+                      <td>{session.duration}</td>
+                      <td>{session.avg_react_time.toFixed(2)}</td>
+                      <td>
+                        {session.total_hits}/{session.total_miss_hits}
+                      </td>
+                      <td className="fw-bold">{calculateScore(session)}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
           </div>
         </div>
       </div>
+
       {/* Footer */}
       <footer className="bg-black text-center py-4 mt-auto">
         <p className="text-secondary mb-0">

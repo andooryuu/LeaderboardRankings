@@ -3,7 +3,16 @@ const fileUpload = require('express-fileupload');
 const csv = require('csv-parser');
 const { Readable } = require('stream');
 const cors = require('cors');
-const { createClient } = require('@supabase/supabase-js');
+const { Pool } = require('pg');
+
+// Configure the PostgreSQL client
+const pool = new Pool({
+  user: 'postgres.rrzipakdeywmmcmykjcc', // Replace with your Supabase database user
+  host: 'aws-0-ca-central-1.pooler.supabase.com', // Replace with your Supabase database host
+  database: 'postgres', // Replace with your Supabase database name
+  password: 'LaZoneTracker101', // Replace with your Supabase database password
+  port: 6543, // Default PostgreSQL port
+});
 
 const app = express();
 const port = 5000;
@@ -16,9 +25,9 @@ app.use(fileUpload({
   createParentPath: true
 }));
 
-const supabaseUrl = "https://rrzipakdeywmmcmykjcc.supabase.co";
-const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyemlwYWtkZXl3bW1jbXlramNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIxMzI0MTEsImV4cCI6MjA1NzcwODQxMX0.PX13Nyd1ga4MKfLDgOxy3lglOm2lyEau-JEO9hgpAkw";
-const supabase = createClient(supabaseUrl, supabaseKey);
+//const supabaseUrl = "https://rrzipakdeywmmcmykjcc.supabase.co";
+//const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyemlwYWtkZXl3bW1jbXlramNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIxMzI0MTEsImV4cCI6MjA1NzcwODQxMX0.PX13Nyd1ga4MKfLDgOxy3lglOm2lyEau-JEO9hgpAkw";
+//const supabase = createClient(supabaseUrl, supabaseKey);
 
 const transformData = (data) => {
   return {
@@ -95,73 +104,65 @@ app.post('/upload', async (req, res) => {
     res.status(500).send(err.toString());
   }
 });
-
-app.get('/player/:username/activities', async (req, res) => {
-  const { username } = req.params;
-  
+app.get('/session/visualCues/:sessionId', async (req, res) => {
+  const { sessionId } = req.params; // Extract sessionId from the request parameters
   try {
-    // First get the player_id for the given username
-    const { data: playerData, error: playerError } = await supabase
-      .from('player')
-      .select('player_id, username')
-      .eq('username', username)
-      .single();
+    const query = `
+      SELECT 
+        v.cue_order,
+        v.visual_cue_time,
+        a.activity_name
+      FROM 
+        Visual_Cues v
+      JOIN 
+        Session_Activity sa ON sa.session_activity_id = v.session_activity_id
+      JOIN
+        Activity a ON a.activity_id = sa.activity_id
+      JOIN 
+        Session s ON s.session_id = sa.session_id
+      JOIN 
+        Players pl ON pl.player_id = s.player_id
+      WHERE 
+        s.session_id = $1 -- Use a placeholder for sessionId
+      ORDER BY 
+        a.activity_name, v.cue_order;
+    `;
 
-    if (playerError) {
-      console.error('Error fetching player data:', playerError);
-      return res.status(500).json({ error: playerError.message });
-    }
-    
-    if (!playerData) {
-      return res.status(404).json({ error: 'Player not found' });
-    }
-    
-    // Now get sessions for this player
-    const { data: sessionData, error: sessionError } = await supabase
-      .from('session')
-      .select('*')
-      .eq('player_id', playerData.player_id);
-      
-    if (sessionError) {
-      console.error('Error fetching session data:', sessionError);
-      return res.status(500).json({ error: sessionError.message });
-    }
-    
-    // Get session_activity entries for these sessions
-    const sessionIds = sessionData.map(session => session.session_id);
-    
-    const { data: sessionActivityData, error: sessionActivityError } = await supabase
-      .from('session_activity')
-      .select('*')
-      .in('session_id', sessionIds);
-      
-    if (sessionActivityError) {
-      console.error('Error fetching session activity data:', sessionActivityError);
-      return res.status(500).json({ error: sessionActivityError.message });
-    }
-    
-    // Get activity data for these session_activities
-    const activityIds = sessionActivityData.map(sa => sa.activity_id);
-    
-    const { data: activityData, error: activityError } = await supabase
-      .from('activity')
-      .select('*')
-      .in('activity_id', activityIds);
-      
-    if (activityError) {
-      console.error('Error fetching activity data:', activityError);
-      return res.status(500).json({ error: activityError.message });
-    }
-    
-    // Return the data in separated tables format
-    const results = {
-      player: playerData,
-      sessions: sessionData,
-      session_activities: sessionActivityData,
-      activities: activityData
-    };
-    
-    res.json(results);
+    const { rows } = await pool.query(query, [sessionId]); // Pass sessionId as a parameter
+    res.json(rows); 
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/stats/:username', async (req, res) => {
+  const { username } = req.params;
+  try {
+    const query=`SELECT 
+    s.session_id,
+    p.activity_date,  -- Ensure this column exists in the Performance table
+    p.activity_time,   -- Ensure this column exists in the Performance table
+    a.activity_name,
+    p.activity_duration,
+    p.activity_hits,
+    p.activity_miss_hits,
+    p.activity_avg_react_time,
+    p.activity_strikes
+FROM
+    Performance p
+JOIN
+    Session_Activity sa ON p.session_activity_id = sa.session_activity_id
+JOIN
+    Activity a ON a.activity_id = sa.activity_id
+JOIN
+    Session s ON s.session_id = sa.session_id
+JOIN
+    Players pl ON pl.player_id = s.player_id
+WHERE 
+    pl.username = '${username}';  -- Use single quotes for string literals`
+    const { rows } = await pool.query(query);
+    res.json(rows);
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -170,31 +171,62 @@ app.get('/player/:username/activities', async (req, res) => {
 // Endpoint to get scores from multiple tables
 app.get('/scores', async (req, res) => {
   try {
-    const tables = ['activity', 'player', 'session','session_activity']; 
-    const results = {};
+    const query = `
+      SELECT 
+        pl.username,
+        REGEXP_REPLACE(a.activity_name, '\\d+$', '') AS base_activity_name, -- Remove trailing numbers
+        SUM(perf.activity_duration) AS activity_duration,
+        SUM(perf.activity_hits) AS activity_hits,
+        SUM(perf.activity_miss_hits) AS activity_miss_hits,
+        AVG(perf.activity_avg_react_time) AS activity_avg_react_time, -- Average reaction time
+        SUM(perf.activity_strikes) AS activity_strikes,
+        MIN(perf.activity_date) AS first_activity_date, -- Get the first activity date
+        MIN(perf.activity_time) AS first_activity_time -- Get the first activity time
+      FROM 
+        Performance perf
+      JOIN 
+        Session_Activity sa ON perf.session_activity_id = sa.session_activity_id
+      JOIN    
+        Activity a ON a.activity_id = sa.activity_id
+      JOIN 
+        Session s ON sa.session_id = s.session_id
+      JOIN 
+        Players pl ON pl.player_id = s.player_id
+      GROUP BY 
+        pl.username, base_activity_name
+      ORDER BY 
+        pl.username, base_activity_name;
+    `;
 
-    for (const table of tables) {
-      const { data, error } = await supabase
-        .from(table)
-        .select('*');
+    const { rows } = await pool.query(query);
 
-      if (error) {
-        return res.status(500).send(error.message);
-      }
+    // Transform the data into the desired format
+    const scores = rows.map((row) => ({
+      username: row.username,
+      scores: [
+        {
+          activity_name: row.base_activity_name,
+          activities: [
+            {
+              activity_duration: row.activity_duration,
+              activity_hits: row.activity_hits,
+              activity_miss_hits: row.activity_miss_hits,
+              activity_avg_react_time: row.activity_avg_react_time,
+              activity_strikes: row.activity_strikes,
+              activity_date: row.first_activity_date, // Use the first activity date
+              activity_time: row.first_activity_time, // Use the first activity time
+            },
+          ],
+        },
+      ],
+    }));
 
-      results[table] = data;
-    }
-
-    res.json(results);
+    res.json(scores); // Return the transformed data
   } catch (err) {
+    console.error('Error:', err);
     res.status(500).send(err.toString());
   }
 });
-
-app.get('/', (req, res) => {
-  res.send('Server is running!');
-});
-
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
 });

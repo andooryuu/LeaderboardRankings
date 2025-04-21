@@ -1,11 +1,11 @@
 interface Score {
     id: number;
     session_id: number;
-    activity_date: string;
-    activity_time: string;
+    session_date: string;
+    session_time: string;
     activity_name: string;
     duration_type: string;
-    activity_duration: string;
+    duration: string;
     light_logic: string;
     station_number: number;
     player_id: number;

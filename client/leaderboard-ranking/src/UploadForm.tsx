@@ -1,41 +1,62 @@
 import { useState } from "react";
+import Papa from "papaparse";
 
-interface UploadFormProps {
-  onUploadSuccess: () => void;
-}
+function UploadForm() {
+  const [csvData, setCsvData] = useState([]);
 
-const UploadForm = ({ onUploadSuccess }: UploadFormProps) => {
-  const [file, setFile] = useState<File | null>(null);
+  const handleFileChange = (e: any) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files.length > 0) {
-      setFile(event.target.files[0]);
-    }
-  };
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: function (results: any) {
+        const rawData = results.data;
 
-  const handleUpload = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!file) return alert("Please select a file!");
+        // ✅ Do your tweaks here!
+        const tweaked = rawData.map((row: any) => {
+          return {
+            ...row,
+            newField: row.existingField?.toUpperCase(), // just an example
+          };
+        });
 
-    const formData = new FormData();
-    formData.append("csv", file);
-
-    const response = await fetch("http://localhost:5000/upload", {
-      method: "POST",
-      body: formData,
+        setCsvData(tweaked);
+      },
     });
-
-    const result = await response.json();
-    alert(JSON.stringify(result, null, 2));
-    onUploadSuccess();
-    console.log("here");
   };
 
   return (
-    <form onSubmit={handleUpload}>
-      <button type="submit">Upload</button>
-    </form>
+    <div>
+      <label htmlFor="csvFileInput">Upload CSV File:</label>
+      <input
+        id="csvFileInput"
+        type="file"
+        accept=".csv"
+        onChange={handleFileChange}
+        title="Choose a CSV file to upload"
+      />
+      <h3>Preview</h3>
+      <table border={1}>
+        <thead>
+          <tr>
+            {csvData[0] &&
+              Object.keys(csvData[0]).map((key) => <th key={key}>{key}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {csvData.map((row, index) => (
+            <tr key={index}>
+              {Object.values(row).map((val, i) => (
+                <td key={i}>{String(val)}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
-};
+}
 
 export default UploadForm;
