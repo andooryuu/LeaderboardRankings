@@ -1,0 +1,7 @@
+,Activity date,Activity time,Activity name,Duration type,Duration hit count,Cycle duration (sec),Activity duration (sec),Light logic,Station number,Cycle number,Player number,Player name,Avg reaction time (ms),Total hits,Total miss hits,Total strikes,Repetitions,Lights out,Visual cue #1 (ms),Color #1,Visual cue #2 (ms),Color #2,Visual cue #3 (ms),Color #3,Visual cue #4 (ms),Color #4,Visual cue #5 (ms),Color #5,Visual cue #6 (ms),Color #6,Visual cue #7 (ms),Color #7,Visual cue #8 (ms),Color #8,Visual cue #9 (ms),Color #9,Visual cue #10 (ms),Color #10,Visual cue #11 (ms),Color #11,Visual cue #12 (ms),Color #12,Visual cue #13 (ms),Color #13,Levels,Steps
+1,2024-05-07,14:23:13,TDS1E1,once,,,240,Sequence,1,1,1,Tactgearz,1245,6,0,0,1,Hit,683,Red,1034,Red,1568,Red,1179,Red,1518,Red,2030,Red,,,,,,,,,,,,,,,,,
+2,2024-05-07,14:23:13,TDS2E1,once,,,240,Sequence,1,1,1,Tactgearz,1107,6,0,0,1,Hit,863,Red,1206,Red,1022,Red,1134,Red,1157,Red,1262,Red,,,,,,,,,,,,,,,,,
+3,2024-05-07,14:23:16,TDS3E1,once,,,240,Sequence,1,1,1,Tactgearz,1056,6,0,0,1,Hit,858,Red,987,Red,1088,Red,987,Red,1173,Red,1244,Red,,,,,,,,,,,,,,,,,
+4,2024-05-07,14:25:00,EXS1E1,once,,,60,Sequence,1,1,1,Tactgearz,1203,6,0,0,1,Hit,1267,Red,1243,Red,1166,Red,1119,Red,1123,Red,1299,Red,,,,,,,,,,,,,,,,,
+5,2024-05-07,14:25:30,EXS2E1,once,,,60,Sequence,1,1,1,Tactgearz,1150,6,0,0,1,Hit,1100,Red,1200,Red,1050,Red,1000,Red,1075,Red,1225,Red,,,,,,,,,,,,,,,,,
+6,2024-05-07,14:26:00,EXS3E1,once,,,60,Sequence,1,1,1,Tactgearz,1175,6,0,0,1,Hit,1200,Red,1150,Red,1100,Red,1050,Red,1125,Red,1275,Red,,,,,,,,,,,,,,,,,

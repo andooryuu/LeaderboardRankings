@@ -37,7 +37,6 @@ interface UserData {
 
 interface DisplaySession {
   session_id: number;
-  station_number: number;
   avg_react_time: number;
   total_hits: number;
   total_miss_hits: number;
@@ -128,7 +127,6 @@ function StatsPage() {
 
           const displaySession: DisplaySession = {
             session_id: sessionId,
-            station_number: (sessionId % 5) + 1, // Placeholder: assign a station number based on session ID
             avg_react_time: avgReactTime,
             total_hits: totalHits,
             total_miss_hits: totalMissHits,
@@ -398,7 +396,6 @@ function StatsPage() {
                 <thead>
                   <tr>
                     <th>Session ID</th>
-                    <th>Station</th>
                     <th>Duration (sec)</th>
                     <th>Avg Reaction (ms)</th>
                     <th>Hits/Misses</th>
@@ -414,7 +411,6 @@ function StatsPage() {
                       className="session-row"
                     >
                       <td>{session.session_id}</td>
-                      <td>{session.station_number}</td>
                       <td>{session.duration}</td>
                       <td>{session.avg_react_time.toFixed(2)}</td>
                       <td>

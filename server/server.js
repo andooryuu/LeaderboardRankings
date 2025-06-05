@@ -1,16 +1,16 @@
-const express = require('express');
-const fileUpload = require('express-fileupload');
-const csv = require('csv-parser');
-const { Readable } = require('stream');
-const cors = require('cors');
-const { Pool } = require('pg');
+const express = require("express");
+const fileUpload = require("express-fileupload");
+const csv = require("csv-parser");
+const { Readable } = require("stream");
+const cors = require("cors");
+const { Pool } = require("pg");
 
 // Configure the PostgreSQL client
 const pool = new Pool({
-  user: 'postgres.rrzipakdeywmmcmykjcc', // Replace with your Supabase database user
-  host: 'aws-0-ca-central-1.pooler.supabase.com', // Replace with your Supabase database host
-  database: 'postgres', // Replace with your Supabase database name
-  password: 'LaZoneTracker101', // Replace with your Supabase database password
+  user: "postgres.rrzipakdeywmmcmykjcc", // Replace with your Supabase database user
+  host: "aws-0-ca-central-1.pooler.supabase.com", // Replace with your Supabase database host
+  database: "postgres", // Replace with your Supabase database name
+  password: "LaZoneTracker101", // Replace with your Supabase database password
   port: 6543, // Default PostgreSQL port
 });
 
@@ -20,98 +20,113 @@ const port = 5000;
 // Enable CORS
 app.use(cors());
 
+// Increase payload limits for large session data
+app.use(express.json({ limit: "50mb" })); // Increase JSON payload limit
+app.use(express.urlencoded({ limit: "50mb", extended: true })); // Also increase URL-encoded limit
+
 // Enable files upload
-app.use(fileUpload({
-  createParentPath: true
-}));
+app.use(
+  fileUpload({
+    createParentPath: true,
+    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB file upload limit
+  })
+);
 
 //const supabaseUrl = "https://rrzipakdeywmmcmykjcc.supabase.co";
 //const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyemlwYWtkZXl3bW1jbXlramNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIxMzI0MTEsImV4cCI6MjA1NzcwODQxMX0.PX13Nyd1ga4MKfLDgOxy3lglOm2lyEau-JEO9hgpAkw";
 //const supabase = createClient(supabaseUrl, supabaseKey);
 
 const transformData = (data) => {
-  return {
-    activityDate: data['Activity date'],
-    activityTime: data['Activity time'],
-    activityName: data['Activity name'],
-    durationType: data['Duration type'],
-    durationHitCount: data['Duration hit count'],
-    cycleDuration: data['Cycle duration (sec)'],
-    activityDuration: data['Activity duration (sec)'],
-    lightLogic: data['Light logic'],
-    stationNumber: data['Station number'],
-    cycleNumber: data['Cycle number'],
-    playerNumber: data['Player number'],
-    playerName: data['Player name'],
-    avgReactionTime: data['Avg reaction time (ms)'],
-    totalHits: data['Total hits'],
-    totalMissHits: data['Total miss hits'],
-    totalStrikes: data['Total strikes'],
-    repetitions: data['Repetitions'],
-    lightsOut: data['Lights out'],
-    visualCue1: data['Visual cue #1 (ms)'],
-    color1: data['Color #1'],
-    visualCue2: data['Visual cue #2 (ms)'],
-    color2: data['Color #2'],
-    visualCue3: data['Visual cue #3 (ms)'],
-    color3: data['Color #3'],
-    visualCue4: data['Visual cue #4 (ms)'],
-    color4: data['Color #4'],
-    visualCue5: data['Visual cue #5 (ms)'],
-    color5: data['Color #5'],
-    visualCue6: data['Visual cue #6 (ms)'],
-    color6: data['Color #6'],
-    visualCue7: data['Visual cue #7 (ms)'],
-    color7: data['Color #7'],
-    visualCue8: data['Visual cue #8 (ms)'],
-    color8: data['Color #8'],
-    visualCue9: data['Visual cue #9 (ms)'],
-    color9: data['Color #9'],
-    visualCue10: data['Visual cue #10 (ms)'],
-    color10: data['Color #10'],
-    visualCue11: data['Visual cue #11 (ms)'],
-    color11: data['Color #11'],
-    visualCue12: data['Visual cue #12 (ms)'],
-    color12: data['Color #12'],
-    visualCue13: data['Visual cue #13 (ms)'],
-    color13: data['Color #13'],
-    levels: data['Levels'],
-    steps: data['Steps']
+  // Start with the basic fields
+  const transformed = {
+    activityDate: data["Activity date"],
+    activityTime: data["Activity time"],
+    activityName: data["Activity name"],
+    durationType: data["Duration type"],
+    durationHitCount: data["Duration hit count"],
+    cycleDuration: data["Cycle duration (sec)"],
+    activityDuration: data["Activity duration (sec)"],
+    lightLogic: data["Light logic"],
+    stationNumber: data["Station number"],
+    cycleNumber: data["Cycle number"],
+    playerNumber: data["Player number"],
+    playerName: data["Player name"],
+    avgReactionTime: data["Avg reaction time (ms)"],
+    totalHits: data["Total hits"],
+    totalMissHits: data["Total miss hits"],
+    totalStrikes: data["Total strikes"],
+    repetitions: data["Repetitions"],
+    lightsOut: data["Lights out"],
+    levels: data["Levels"],
+    steps: data["Steps"],
   };
+
+  // Dynamically add any visual cue and color fields
+  // This will detect all visual cue fields regardless of how many there are
+  Object.keys(data).forEach((key) => {
+    if (key.match(/^Visual cue #(\d+) \(ms\)$/)) {
+      // Extract the cue number from the key (e.g., "Visual cue #5 (ms)" -> 5)
+      const cueNumber = key.match(/^Visual cue #(\d+) \(ms\)$/)[1];
+      const cueKey = `visualCue${cueNumber}`;
+      const colorKey = `color${cueNumber}`;
+
+      // Add the visual cue data to the transformed object
+      transformed[cueKey] = data[key];
+      transformed[colorKey] = data[`Color #${cueNumber}`];
+    }
+  });
+
+  return transformed;
 };
 
 // In-memory storage for scores
 let scores = [];
 
-// Handle file upload and parse CSV to JSON
-app.post('/upload', async (req, res) => {
+// Add this to your server.js file
+app.post("/upload", async (req, res) => {
   try {
     if (!req.files || !req.files.csv) {
-      return res.status(400).send('No file uploaded.');
+      return res.status(400).send("No file uploaded.");
     }
-    const csvFile = req.files.csv;
 
+    const csvFile = req.files.csv;
     const results = [];
     const stream = Readable.from(csvFile.data.toString());
+
     stream
       .pipe(csv())
-      .on('data', (data) => results.push(transformData(data)))
-      .on('end', () => {
-        scores = results;
+      .on("data", (data) => {
+        const transformed = transformData(data);
+        results.push(transformed);
+      })
+      .on("end", () => {
+        console.log(`Processed ${results.length} activities from CSV`);
         res.json(results);
+      })
+      .on("error", (error) => {
+        console.error("CSV parsing error:", error);
+        res.status(500).send("Error parsing CSV file");
       });
   } catch (err) {
+    console.error("Upload error:", err);
     res.status(500).send(err.toString());
   }
 });
-app.get('/session/visualCues/:sessionId', async (req, res) => {
-  const { sessionId } = req.params; // Extract sessionId from the request parameters
+app.get("/session/visualCues/:sessionId", async (req, res) => {
+  const { sessionId } = req.params;
   try {
+    // Modified query to combine visual cues from all three sections in the session
+    // In your /session/visualCues/:sessionId endpoint
     const query = `
       SELECT 
         v.cue_order,
         v.visual_cue_time,
-        a.activity_name
+        v.visual_cue_color,
+        a.activity_name,
+        sa.session_activity_id, -- Add this to distinguish activity instances
+        REGEXP_REPLACE(a.activity_name, '[^0-9]', '', 'g') AS section_number,
+        p.activity_date,
+        p.activity_time
       FROM 
         Visual_Cues v
       JOIN 
@@ -120,26 +135,70 @@ app.get('/session/visualCues/:sessionId', async (req, res) => {
         Activity a ON a.activity_id = sa.activity_id
       JOIN 
         Session s ON s.session_id = sa.session_id
+      JOIN
+        Performance p ON p.session_activity_id = sa.session_activity_id
       JOIN 
         Players pl ON pl.player_id = s.player_id
       WHERE 
-        s.session_id = $1 -- Use a placeholder for sessionId
+        s.session_id = $1
       ORDER BY 
-        a.activity_name, v.cue_order;
+        a.activity_name, sa.session_activity_id, v.cue_order;
     `;
 
-    const { rows } = await pool.query(query, [sessionId]); // Pass sessionId as a parameter
-    res.json(rows); 
+    const { rows } = await pool.query(query, [sessionId]);
+
+    // Transform the data to combine visual cues from all sections
+    const combinedVisualCues = {
+      sessionId: sessionId,
+      playerName: rows.length > 0 ? rows[0].player_name : "Unknown",
+      date: rows.length > 0 ? rows[0].activity_date : null,
+      sections: {},
+      combinedCues: [],
+    };
+
+    // Organize cues by section first
+    rows.forEach((row) => {
+      // Use both activity name and session_activity_id for unique se
+      const sectionKey = `${row.activity_name}-${row.session_activity_id}`;
+
+      if (!combinedVisualCues.sections[sectionKey]) {
+        combinedVisualCues.sections[sectionKey] = [];
+      }
+
+      combinedVisualCues.sections[sectionKey].push({
+        cue_order: row.cue_order,
+        visual_cue_time: row.visual_cue_time,
+        visual_cue_color: row.visual_cue_color,
+        section_number: row.section_number,
+        activity_name: row.activity_name,
+        session_activity_id: row.session_activity_id,
+      });
+      // Also add to the combined array
+      combinedVisualCues.combinedCues.push({
+        cue_order: row.cue_order,
+        visual_cue_time: row.visual_cue_time,
+        visual_cue_color: row.visual_cue_color,
+        section_number: row.section_number,
+        activity_name: row.activity_name,
+      });
+    });
+
+    // Sort the combined cues by time
+    combinedVisualCues.combinedCues.sort(
+      (a, b) => a.visual_cue_time - b.visual_cue_time
+    );
+
+    res.json(combinedVisualCues);
   } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Error:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
-app.get('/stats/:username', async (req, res) => {
+app.get("/stats/:username", async (req, res) => {
   const { username } = req.params;
   try {
-    const query=`SELECT 
+    const query = `SELECT 
     s.session_id,
     p.activity_date,  -- Ensure this column exists in the Performance table
     p.activity_time,   -- Ensure this column exists in the Performance table
@@ -160,16 +219,16 @@ JOIN
 JOIN
     Players pl ON pl.player_id = s.player_id
 WHERE 
-    pl.username = '${username}';  -- Use single quotes for string literals`
+    pl.username = '${username}';  -- Use single quotes for string literals`;
     const { rows } = await pool.query(query);
     res.json(rows);
   } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Error:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 // Endpoint to get scores from multiple tables
-app.get('/scores', async (req, res) => {
+app.get("/scores", async (req, res) => {
   try {
     const query = `
       SELECT 
@@ -223,10 +282,175 @@ app.get('/scores', async (req, res) => {
 
     res.json(scores); // Return the transformed data
   } catch (err) {
-    console.error('Error:', err);
+    console.error("Error:", err);
     res.status(500).send(err.toString());
   }
 });
+
+// Add this endpoint to your server.js
+// Updated /sessions/save endpoint based on your actual schema
+// Updated /sessions/save endpoint to create one session for all three activities
+app.post("/sessions/save", async (req, res) => {
+  try {
+    const { sessions } = req.body;
+
+    if (!sessions || !Array.isArray(sessions) || sessions.length === 0) {
+      return res.status(400).json({ error: "No valid sessions provided" });
+    }
+
+    let savedCount = 0;
+
+    // Begin transaction
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      for (const session of sessions) {
+        // Only process complete sessions (3 activities)
+        if (session.activities.length !== 3) continue;
+
+        // Extract username from session (remove the prefix part)
+        const username = session.username.split(" (")[0];
+
+        // 1. Get or create player
+        const playerResult = await client.query(
+          "SELECT player_id FROM Players WHERE username = $1",
+          [username]
+        );
+
+        let playerId;
+        if (playerResult.rows.length > 0) {
+          playerId = playerResult.rows[0].player_id;
+        } else {
+          const newPlayerResult = await client.query(
+            "INSERT INTO Players (username) VALUES ($1) RETURNING player_id",
+            [username]
+          );
+          playerId = newPlayerResult.rows[0].player_id;
+        }
+
+        // 2. Create ONE session for all three activities
+        // Use the first activity's station as the session's station number
+        // (or any station identifier you prefer)
+        const stationIdentifier = parseInt(
+          session.activities[0].baseActivityType || "1"
+        );
+
+        const sessionResult = await client.query(
+          "INSERT INTO Session (player_id, station_number) VALUES ($1, $2) RETURNING session_id",
+          [playerId, stationIdentifier]
+        );
+        const sessionId = sessionResult.rows[0].session_id;
+
+        // 3. Process each activity and link to the same session
+        for (const activity of session.activities) {
+          // Extract section number from activity name (S1, S2, S3)
+          const sectionMatch = activity.activityName.match(/S(\d+)/);
+          const stationNumber = sectionMatch ? parseInt(sectionMatch[1]) : 1;
+
+          if (stationNumber < 1 || stationNumber > 3) {
+            console.warn(
+              `Invalid station number ${stationNumber} for activity ${activity.activityName}. Skipping this activity.`
+            );
+            continue;
+          }
+
+          // Get activity name with number (e.g., "TD1", "TD2", "TD3")
+          const activityPrefix = activity.activityPrefix || "TD";
+          const activityName = `${activityPrefix}${stationNumber}`; // This will create TD1, TD2, TD3
+
+          console.log(
+            `Processing activity: ${activityName} for session ${sessionId}`
+          );
+          console.log(
+            `Station number: ${stationNumber}, Extracted from: ${activity.activityName}`
+          );
+
+          // Get or create activity
+          const activityResult = await client.query(
+            "SELECT activity_id FROM Activity WHERE activity_name = $1",
+            [activityName]
+          );
+          let activityId;
+          if (activityResult.rows.length > 0) {
+            activityId = activityResult.rows[0].activity_id;
+          } else {
+            // Create new activity with name (TD1, TD2, etc.) and light logic
+            const newActivityResult = await client.query(
+              "INSERT INTO Activity (activity_name, light_logic) VALUES ($1, $2) RETURNING activity_id",
+              [activityName, activity.lightLogic || null]
+            );
+            activityId = newActivityResult.rows[0].activity_id;
+          }
+
+          // 4. Create session_activity link
+          const sessionActivityResult = await client.query(
+            "INSERT INTO Session_Activity (session_id, activity_id) VALUES ($1, $2) RETURNING session_activity_id",
+            [sessionId, activityId]
+          );
+          const sessionActivityId =
+            sessionActivityResult.rows[0].session_activity_id;
+
+          // 5. Save performance data
+          await client.query(
+            `INSERT INTO Performance 
+             (session_activity_id, activity_duration, activity_hits, activity_miss_hits, 
+              activity_avg_react_time, activity_strikes, activity_date, activity_time) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [
+              sessionActivityId,
+              parseInt(activity.activityDuration || "0"),
+              parseInt(activity.totalHits || "0"),
+              parseInt(activity.totalMissHits || "0"),
+              parseInt(activity.avgReactionTime || "0"),
+              parseInt(activity.totalStrikes || "0"),
+              activity.activityDate,
+              activity.activityTime,
+            ]
+          );
+
+          // 6. Save visual cues data (if present)
+          // In sessions/save endpoint, replace your visual cues loop with:
+          const visualCueKeys = Object.keys(activity).filter(
+            (key) =>
+              key.startsWith("visualCue") &&
+              activity[key] &&
+              activity[key].trim() !== ""
+          );
+
+          for (const key of visualCueKeys) {
+            const cueNumber = parseInt(key.replace("visualCue", ""));
+            const cueTime = activity[key];
+            const cueColor = activity[`color${cueNumber}`];
+
+            if (cueTime && cueTime.trim() !== "") {
+              await client.query(
+                "INSERT INTO Visual_Cues (session_activity_id, cue_order, visual_cue_time, visual_cue_color) VALUES ($1, $2, $3, $4)",
+                [sessionActivityId, cueNumber, parseInt(cueTime), cueColor]
+              );
+            }
+          }
+        }
+
+        savedCount++;
+      }
+
+      await client.query("COMMIT");
+      res.json({ success: true, savedCount });
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error("Error saving sessions:", error);
+    res
+      .status(500)
+      .json({ error: "Failed to save sessions: " + error.message });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
 });
