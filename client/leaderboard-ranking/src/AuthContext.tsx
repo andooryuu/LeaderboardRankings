@@ -1,72 +1,163 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  ReactNode,
-} from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
+
+interface User {
+  email: string;
+  role: string;
+}
 
 interface AuthContextType {
   isAuthenticated: boolean;
-  adminToken: string | null;
-  login: (token: string) => boolean;
+  isLoading: boolean; // Add this line
+  user: User | null;
+  token: string | null;
+  login: (token: string, user: User) => void;
   logout: () => void;
-  isLoading: boolean;
+  requestVerificationCode: (email: string) => Promise<boolean>;
+  verifyCode: (
+    email: string,
+    code: string
+  ) => Promise<{
+    success: boolean;
+    token?: string;
+    user?: User;
+    error?: string;
+  }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// You can change this to a more secure token or implement server-side validation
-const VALID_ADMIN_TOKEN = "blazepod-admin-2024-secure";
-
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-export function AuthProvider({ children }: AuthProviderProps) {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [adminToken, setAdminToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); // Add this line
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
 
-  // Check for existing token on app load
   useEffect(() => {
-    const storedToken = localStorage.getItem("blazepod-admin-token");
-    if (storedToken && storedToken === VALID_ADMIN_TOKEN) {
-      setAdminToken(storedToken);
-      setIsAuthenticated(true);
+    // Check for existing token on app load
+    const savedToken = localStorage.getItem("adminToken");
+    const savedUser = localStorage.getItem("adminUser");
+
+    if (savedToken && savedUser) {
+      // Verify token with server
+      fetch("http://localhost:5000/auth/verify-token", {
+        headers: {
+          Authorization: `Bearer ${savedToken}`,
+        },
+      })
+        .then((response) => {
+          if (response.ok) {
+            setToken(savedToken);
+            setUser(JSON.parse(savedUser));
+            setIsAuthenticated(true);
+          } else {
+            // Token is invalid, clear storage
+            localStorage.removeItem("adminToken");
+            localStorage.removeItem("adminUser");
+          }
+        })
+        .catch(() => {
+          // Network error, clear storage
+          localStorage.removeItem("adminToken");
+          localStorage.removeItem("adminUser");
+        })
+        .finally(() => {
+          setIsLoading(false); // Add this line
+        });
+    } else {
+      setIsLoading(false); // Add this line
     }
-    setIsLoading(false);
   }, []);
 
-  const login = (token: string): boolean => {
-    if (token === VALID_ADMIN_TOKEN) {
-      setAdminToken(token);
-      setIsAuthenticated(true);
-      localStorage.setItem("blazepod-admin-token", token);
-      return true;
+  const requestVerificationCode = async (email: string): Promise<boolean> => {
+    try {
+      const response = await fetch("http://localhost:5000/auth/request-code", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      return response.ok;
+    } catch (error) {
+      console.error("Error requesting verification code:", error);
+      return false;
     }
-    return false;
+  };
+
+  const verifyCode = async (email: string, code: string) => {
+    try {
+      const response = await fetch("http://localhost:5000/auth/verify-code", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, code }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        return {
+          success: true,
+          token: data.token,
+          user: data.user,
+        };
+      } else {
+        return {
+          success: false,
+          error: data.error || "Verification failed",
+        };
+      }
+    } catch (error) {
+      console.error("Error verifying code:", error);
+      return {
+        success: false,
+        error: "Network error occurred",
+      };
+    }
+  };
+
+  const login = (token: string, user: User) => {
+    setToken(token);
+    setUser(user);
+    setIsAuthenticated(true);
+    localStorage.setItem("adminToken", token);
+    localStorage.setItem("adminUser", JSON.stringify(user));
   };
 
   const logout = () => {
-    setAdminToken(null);
+    setToken(null);
+    setUser(null);
     setIsAuthenticated(false);
-    localStorage.removeItem("blazepod-admin-token");
+    localStorage.removeItem("adminToken");
+    localStorage.removeItem("adminUser");
   };
 
   return (
     <AuthContext.Provider
-      value={{ isAuthenticated, adminToken, login, logout, isLoading }}
+      value={{
+        isAuthenticated,
+        isLoading, // Add this line
+        user,
+        token,
+        login,
+        logout,
+        requestVerificationCode,
+        verifyCode,
+      }}
     >
       {children}
     </AuthContext.Provider>
   );
-}
+};
 
-export function useAuth() {
+export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
-}
+};

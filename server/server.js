@@ -4,8 +4,18 @@ const csv = require("csv-parser");
 const { Readable } = require("stream");
 const cors = require("cors");
 const { Pool } = require("pg");
+const jwt = require("jsonwebtoken");
+const nodemailer = require("nodemailer");
+const crypto = require("crypto");
 
+const JWT_SECRET = "your-super-secret-jwt-key-2024-blazepod-admin";
+const ADMIN_EMAIL = "andrew.kartsakis@outlook.com"; // Hardcoded admin email
+const EMAIL_USER = "andrewkartsakis2@gmail.com"; // Your email service
+const EMAIL_PASS = "kfew vwca vwkq ktkk"; // Your email app password
 // Configure the PostgreSQL client
+
+const verificationCodes = new Map();
+
 const pool = new Pool({
   user: "postgres.rrzipakdeywmmcmykjcc", // Replace with your Supabase database user
   host: "aws-0-ca-central-1.pooler.supabase.com", // Replace with your Supabase database host
@@ -17,6 +27,17 @@ const pool = new Pool({
 const app = express();
 const port = 5000;
 
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: EMAIL_USER,
+    pass: EMAIL_PASS,
+  },
+  tls: {
+    // Allow self-signed certificates
+    rejectUnauthorized: false,
+  },
+});
 // Enable CORS
 app.use(cors());
 
@@ -35,6 +56,150 @@ app.use(
 //const supabaseUrl = "https://rrzipakdeywmmcmykjcc.supabase.co";
 //const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyemlwYWtkZXl3bW1jbXlramNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIxMzI0MTEsImV4cCI6MjA1NzcwODQxMX0.PX13Nyd1ga4MKfLDgOxy3lglOm2lyEau-JEO9hgpAkw";
 //const supabase = createClient(supabaseUrl, supabaseKey);
+
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).json({ error: "Access token required" });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ error: "Invalid or expired token" });
+    }
+    req.user = user;
+    next();
+  });
+};
+
+app.post("/auth/request-code", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+
+    // Check if email is the hardcoded admin email
+    if (email.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+      return res
+        .status(403)
+        .json({ error: "Email not authorized for admin access" });
+    }
+
+    // Generate 6-digit verification code
+    const verificationCode = crypto.randomInt(100000, 999999).toString();
+
+    // Store code with 10-minute expiration
+    verificationCodes.set(email, {
+      code: verificationCode,
+      expires: Date.now() + 10 * 60 * 1000, // 10 minutes
+      attempts: 0,
+    });
+
+    // Send email - FIXED THE HTML TEMPLATE
+    const mailOptions = {
+      from: EMAIL_USER,
+      to: email,
+      subject: "Admin Verification Code",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333;">Admin Access</h2>
+          <p>Le code de vérification est:</p>
+          <div style="background: #f5f5f5; padding: 20px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
+            ${verificationCode}
+          </div>
+          <p>Ce code expirera dans 10 minutes.</p>
+          <p style="color: #666; font-size: 12px;">If you didn't request this code, please ignore this email.</p>
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    res.json({
+      success: true,
+      message: "Verification code sent to your email",
+      expiresIn: "10 minutes",
+    });
+  } catch (error) {
+    console.error("Error sending verification email:", error);
+    res.status(500).json({ error: "Failed to send verification code" });
+  }
+});
+
+app.post("/auth/verify-code", (req, res) => {
+  try {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+      return res.status(400).json({ error: "Email and code are required" });
+    }
+
+    const storedData = verificationCodes.get(email);
+
+    if (!storedData) {
+      return res
+        .status(400)
+        .json({ error: "No verification code found for this email" });
+    }
+
+    // Check if code has expired
+    if (Date.now() > storedData.expires) {
+      verificationCodes.delete(email);
+      return res.status(400).json({ error: "Verification code has expired" });
+    }
+
+    // Check attempts limit
+    if (storedData.attempts >= 3) {
+      verificationCodes.delete(email);
+      return res.status(429).json({
+        error: "Too many failed attempts. Please request a new code.",
+      });
+    }
+
+    // Verify code
+    if (storedData.code !== code) {
+      storedData.attempts++;
+      return res.status(400).json({ error: "Invalid verification code" });
+    }
+    // Code is valid - generate JWT token
+    const token = jwt.sign(
+      {
+        email: email,
+        role: "admin",
+        iat: Math.floor(Date.now() / 1000),
+      },
+      JWT_SECRET,
+      { expiresIn: "24h" } // Token expires in 24 hours
+    );
+
+    // Clean up verification code
+    verificationCodes.delete(email);
+
+    res.json({
+      success: true,
+      token: token,
+      expiresIn: "24h",
+      user: {
+        email: email,
+        role: "admin",
+      },
+    });
+  } catch (error) {
+    console.error("Error verifying code:", error);
+    res.status(500).json({ error: "Failed to verify code" });
+  }
+});
+
+app.get("/auth/verify-token", authenticateToken, (req, res) => {
+  res.json({
+    valid: true,
+    user: req.user,
+  });
+});
 
 const transformData = (data) => {
   // Start with the basic fields
@@ -227,20 +392,35 @@ WHERE
     res.status(500).json({ error: "Internal server error" });
   }
 });
-// Endpoint to get scores from multiple tables
+
+// Endpoint to get scores from multiple tables - SESSION LEVEL DATA (AGGREGATED)
+// ...existing code...
+
+// Endpoint to get scores from multiple tables - SESSION LEVEL DATA (AGGREGATED)
 app.get("/scores", async (req, res) => {
   try {
     const query = `
       SELECT 
         pl.username,
-        REGEXP_REPLACE(a.activity_name, '\\d+$', '') AS base_activity_name, -- Remove trailing numbers
-        SUM(perf.activity_duration) AS activity_duration,
-        SUM(perf.activity_hits) AS activity_hits,
-        SUM(perf.activity_miss_hits) AS activity_miss_hits,
-        AVG(perf.activity_avg_react_time) AS activity_avg_react_time, -- Average reaction time
-        SUM(perf.activity_strikes) AS activity_strikes,
-        MIN(perf.activity_date) AS first_activity_date, -- Get the first activity date
-        MIN(perf.activity_time) AS first_activity_time -- Get the first activity time
+        s.session_id,
+        MIN(perf.activity_date) as session_date,
+        MIN(perf.activity_time) as session_time,
+        SUM(perf.activity_duration) as total_duration,
+        SUM(perf.activity_hits) as total_hits,
+        SUM(perf.activity_miss_hits) as total_miss_hits,
+        SUM(perf.activity_strikes) as total_strikes,
+        -- Weighted average reaction time (fixed calculation)
+        CASE 
+          WHEN SUM(perf.activity_hits) > 0 
+          THEN ROUND(
+            SUM(perf.activity_avg_react_time * perf.activity_hits) / SUM(perf.activity_hits)
+          )
+          ELSE 0 
+        END as avg_react_time,
+        -- Get the activity type (TD or EX) from the first activity
+        SUBSTRING(MIN(a.activity_name) FROM '^[A-Z]+') as activity_type,
+        -- Count activities per session to ensure complete sessions
+        COUNT(perf.session_activity_id) as activity_count
       FROM 
         Performance perf
       JOIN 
@@ -252,43 +432,69 @@ app.get("/scores", async (req, res) => {
       JOIN 
         Players pl ON pl.player_id = s.player_id
       GROUP BY 
-        pl.username, base_activity_name
+        pl.username, s.session_id
+      HAVING 
+        COUNT(perf.session_activity_id) = 3  -- Only complete sessions (3 activities)
       ORDER BY 
-        pl.username, base_activity_name;
+        pl.username, s.session_id;
     `;
 
     const { rows } = await pool.query(query);
 
-    // Transform the data into the desired format
-    const scores = rows.map((row) => ({
-      username: row.username,
-      scores: [
-        {
-          activity_name: row.base_activity_name,
-          activities: [
-            {
-              activity_duration: row.activity_duration,
-              activity_hits: row.activity_hits,
-              activity_miss_hits: row.activity_miss_hits,
-              activity_avg_react_time: row.activity_avg_react_time,
-              activity_strikes: row.activity_strikes,
-              activity_date: row.first_activity_date, // Use the first activity date
-              activity_time: row.first_activity_time, // Use the first activity time
-            },
-          ],
-        },
-      ],
-    }));
+    console.log("Sample row from database:", rows[0]); // Debug log
 
-    res.json(scores); // Return the transformed data
+    // Transform the data into the desired format - group by username and activity type
+    const userMap = new Map();
+
+    rows.forEach((row) => {
+      if (!userMap.has(row.username)) {
+        userMap.set(row.username, {
+          username: row.username,
+          scores: [],
+        });
+      }
+
+      const user = userMap.get(row.username);
+
+      // Find existing activity type (TD or EX) or create new one
+      let activityScore = user.scores.find(
+        (score) => score.activity_name === row.activity_type
+      );
+
+      if (!activityScore) {
+        activityScore = {
+          activity_name: row.activity_type, // This will be "TD" or "EX"
+          activities: [],
+        };
+        user.scores.push(activityScore);
+      }
+
+      // Add this session's aggregated data
+      activityScore.activities.push({
+        activity_date: row.session_date,
+        activity_time: row.session_time,
+        activity_duration: parseInt(row.total_duration), // Ensure it's an integer
+        activity_hits: parseInt(row.total_hits),
+        activity_miss_hits: parseInt(row.total_miss_hits),
+        activity_avg_react_time: parseInt(row.avg_react_time),
+        activity_strikes: parseInt(row.total_strikes),
+        session_id: row.session_id,
+      });
+    });
+
+    // Convert map to array
+    const scores = Array.from(userMap.values());
+
+    console.log("Sample transformed data:", JSON.stringify(scores[0], null, 2)); // Debug log
+
+    res.json(scores);
   } catch (err) {
     console.error("Error:", err);
     res.status(500).send(err.toString());
   }
 });
 
-// Add this endpoint to your server.js
-// Updated /sessions/save endpoint based on your actual schema
+// ...existing code...
 // Updated /sessions/save endpoint to create one session for all three activities
 app.post("/sessions/save", async (req, res) => {
   try {

@@ -6,6 +6,7 @@ import StatsPage from "./StatsPage";
 import NavBar from "./NavBar";
 import Leaderboard from "./Leaderboard";
 import { AuthProvider, useAuth } from "./AuthContext";
+import { LanguageProvider } from "./LanguageContext.tsx";
 import AdminLogin from "./AdminLogin";
 import AdminDashboard from "./AdminDashboard";
 import Test from "./test";
@@ -28,61 +29,63 @@ function ProtectedAdminRoute() {
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <div className="app-container">
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <>
-                  <NavBar />
-                  <HomePage />
-                </>
-              }
-            />
-            <Route
-              path="/test"
-              element={
-                <>
-                  <NavBar />
-                  <Test />
-                </>
-              }
-            />
+    <LanguageProvider>
+      <AuthProvider>
+        <Router>
+          <div className="app-container">
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  <>
+                    <NavBar />
+                    <HomePage />
+                  </>
+                }
+              />
+              <Route
+                path="/test"
+                element={
+                  <>
+                    <NavBar />
+                    <Test />
+                  </>
+                }
+              />
 
-            <Route
-              path="/upload"
-              element={
-                <>
-                  <NavBar />
-                  <UploadForm />
-                </>
-              }
-            />
-            <Route
-              path="/stats/:username"
-              element={
-                <>
-                  <NavBar />
-                  <StatsPage />
-                </>
-              }
-            />
-            <Route
-              path="/leaderboard"
-              element={
-                <>
-                  <NavBar />
-                  <Leaderboard />
-                </>
-              }
-            />
-            <Route path="/admin" element={<ProtectedAdminRoute />} />
-          </Routes>
-        </div>
-      </Router>
-    </AuthProvider>
+              <Route
+                path="/upload"
+                element={
+                  <>
+                    <NavBar />
+                    <UploadForm />
+                  </>
+                }
+              />
+              <Route
+                path="/stats/:username"
+                element={
+                  <>
+                    <NavBar />
+                    <StatsPage />
+                  </>
+                }
+              />
+              <Route
+                path="/leaderboard"
+                element={
+                  <>
+                    <NavBar />
+                    <Leaderboard />
+                  </>
+                }
+              />
+              <Route path="/admin" element={<ProtectedAdminRoute />} />
+            </Routes>
+          </div>
+        </Router>
+      </AuthProvider>
+    </LanguageProvider>
   );
 }
 

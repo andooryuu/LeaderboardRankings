@@ -9,12 +9,15 @@ import {
 } from "react-bootstrap";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { FaSearch } from "react-icons/fa";
-import "./NavBar.css"; // Import the CSS file
+import { useLanguage } from "./LanguageContext";
+import LanguageToggle from "./LanguageToggle";
+import "./NavBar.css";
 
 const NavBar: React.FC = () => {
   const [searchQuery, setSearchQuery] = React.useState("");
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useLanguage();
 
   // Don't show navbar on homepage
   if (location.pathname === "/") {
@@ -38,15 +41,31 @@ const NavBar: React.FC = () => {
     >
       <Container>
         <Navbar.Brand as={Link} to="/" className="fw-bold">
-          LA ZONE TRACKER
+          {t.laZoneTracker}
         </Navbar.Brand>
         <Navbar.Toggle aria-controls="navbar-nav" />
         <Navbar.Collapse id="navbar-nav">
           <Nav className="me-auto">
             <Nav.Link as={Link} to="/leaderboard">
-              Leaderboard
+              {t.leaderboard}
             </Nav.Link>
           </Nav>
+
+          <Form className="d-flex me-3" onSubmit={handleSearch}>
+            <FormControl
+              type="search"
+              placeholder={t.search}
+              className="me-2"
+              aria-label="Search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <Button variant="outline-light" type="submit">
+              <FaSearch />
+            </Button>
+          </Form>
+
+          <LanguageToggle variant="outline-light" size="sm" />
         </Navbar.Collapse>
       </Container>
     </Navbar>

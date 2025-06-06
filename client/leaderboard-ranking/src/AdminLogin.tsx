@@ -7,30 +7,60 @@ import {
   Alert,
   InputGroup,
 } from "react-bootstrap";
-import { Eye, EyeOff, Shield, AlertCircle, Lock } from "lucide-react";
+import { Eye, EyeOff, Shield, AlertCircle, Mail, Key } from "lucide-react";
 import { useAuth } from "./AuthContext";
 
 function AdminLogin() {
-  const [token, setToken] = useState("");
-  const [showToken, setShowToken] = useState(false);
+  const [step, setStep] = useState<"email" | "code">("email");
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, requestVerificationCode, verifyCode } = useAuth();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
+    setSuccess("");
+
+    const success = await requestVerificationCode(email);
+
+    if (success) {
+      setStep("code");
+      setSuccess("Code de vérification envoyé à votre email");
+    } else {
+      setError(
+        "Échec de l'envoi du code de vérification. Veuillez vérifier votre email et réessayer."
+      );
+    }
+
+    setIsLoading(false);
+  };
+
+  const handleCodeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
 
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    const result = await verifyCode(email, code);
 
-    const success = login(token);
-    if (!success) {
-      setError("Invalid admin token. Please check your credentials.");
+    if (result.success && result.token && result.user) {
+      login(result.token, result.user);
+      // Navigation will happen automatically via AuthContext
+    } else {
+      setError(result.error || "Vérification échouée");
     }
 
     setIsLoading(false);
+  };
+
+  const handleBackToEmail = () => {
+    setStep("email");
+    setCode("");
+    setError("");
+    setSuccess("");
   };
 
   return (
@@ -42,7 +72,6 @@ function AdminLogin() {
         position: "relative",
       }}
     >
-      {/* Background overlay */}
       <div
         style={{
           position: "absolute",
@@ -52,15 +81,14 @@ function AdminLogin() {
           bottom: 0,
           backgroundColor: "rgba(0, 0, 0, 0.2)",
         }}
-      ></div>
+      />
 
       <Container
         className="position-relative"
         style={{ zIndex: 10, maxWidth: "400px" }}
       >
         <Card className="shadow-lg border-0" style={{ borderRadius: "1rem" }}>
-          {" "}
-          {/* Header */}{" "}
+          {/* Header */}
           <Card.Header
             className="text-white text-center py-4"
             style={{
@@ -76,95 +104,151 @@ function AdminLogin() {
                 <Shield size={32} className="text-white" />
               </div>
             </div>
-            <h2 className="h3 fw-bold mb-2">Admin Access</h2>
+            <h2 className="h3 fw-bold mb-2">Accès Administrateur</h2>
             <p className="mb-0 small" style={{ opacity: 0.8 }}>
-              Enter your admin token to access the upload dashboard
+              {step === "email"
+                ? "Entrez votre email administrateur pour recevoir un code de vérification"
+                : "Entrez le code de vérification envoyé à votre email"}
             </p>
-          </Card.Header>{" "}
+          </Card.Header>
+
           {/* Form */}
           <Card.Body className="p-4">
-            <Form onSubmit={handleSubmit}>
-              <Form.Group className="mb-3">
-                <Form.Label className="fw-semibold text-dark">
-                  <Lock size={16} className="me-2" />
-                  Admin Token
-                </Form.Label>
-                <InputGroup>
-                  <Form.Control
-                    type={showToken ? "text" : "password"}
-                    value={token}
-                    onChange={(e) => setToken(e.target.value)}
-                    placeholder="Enter your admin token"
-                    required
-                    className="border-end-0"
-                    style={{ borderRadius: "0.5rem 0 0 0.5rem" }}
-                  />
-                  <Button
-                    variant="outline-secondary"
-                    type="button"
-                    onClick={() => setShowToken(!showToken)}
-                    className="border-start-0"
-                    style={{ borderRadius: "0 0.5rem 0.5rem 0" }}
-                  >
-                    {showToken ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </Button>
-                </InputGroup>
-              </Form.Group>
-              {error && (
-                <Alert
-                  variant="danger"
-                  className="d-flex align-items-center mb-3"
-                >
-                  <AlertCircle size={18} className="me-2 flex-shrink-0" />
-                  <small>{error}</small>
-                </Alert>
-              )}{" "}
-              <Button
-                type="submit"
-                disabled={isLoading || !token.trim()}
-                className="w-100 py-2 fw-semibold"
-                style={{
-                  background:
-                    "linear-gradient(135deg, #000000 0%, #333333 100%)",
-                  border: "none",
-                  borderRadius: "0.5rem",
-                }}
+            {success && (
+              <Alert
+                variant="success"
+                className="d-flex align-items-center mb-3"
               >
-                {isLoading ? (
-                  <>
-                    <div
-                      className="spinner-border spinner-border-sm me-2"
-                      role="status"
-                      aria-hidden="true"
-                    ></div>
-                    Authenticating...
-                  </>
-                ) : (
-                  <>
-                    <Lock size={18} className="me-2" />
-                    Access Dashboard
-                  </>
-                )}
-              </Button>
-            </Form>
+                <Key size={18} className="me-2 flex-shrink-0" />
+                <small>{success}</small>
+              </Alert>
+            )}
 
-            <hr className="my-4" />
+            {error && (
+              <Alert
+                variant="danger"
+                className="d-flex align-items-center mb-3"
+              >
+                <AlertCircle size={18} className="me-2 flex-shrink-0" />
+                <small>{error}</small>
+              </Alert>
+            )}
 
-            <div className="text-center">
-              <p className="text-muted small mb-2">For demo purposes, use:</p>
-              <code className="bg-light px-2 py-1 rounded text-dark small">
-                blazepod-admin-2024-secure
-              </code>
-            </div>
-          </Card.Body>{" "}
+            {step === "email" ? (
+              <Form onSubmit={handleEmailSubmit}>
+                <Form.Group className="mb-3">
+                  <Form.Label className="fw-semibold text-dark">
+                    <Mail size={16} className="me-2" />
+                    Email Admin
+                  </Form.Label>
+                  <Form.Control
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Entrez votre email administrateur"
+                    required
+                    style={{ borderRadius: "0.5rem" }}
+                  />
+                </Form.Group>
+
+                <Button
+                  type="submit"
+                  disabled={isLoading || !email.trim()}
+                  className="w-100 py-2 fw-semibold"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #000000 0%, #333333 100%)",
+                    border: "none",
+                    borderRadius: "0.5rem",
+                  }}
+                >
+                  {isLoading ? (
+                    <>
+                      <div
+                        className="spinner-border spinner-border-sm me-2"
+                        role="status"
+                        aria-hidden="true"
+                      />
+                      Envoi du code...
+                    </>
+                  ) : (
+                    <>
+                      <Mail size={18} className="me-2" />
+                      Envoyer le code de vérification
+                    </>
+                  )}
+                </Button>
+              </Form>
+            ) : (
+              <Form onSubmit={handleCodeSubmit}>
+                <Form.Group className="mb-3">
+                  <Form.Label className="fw-semibold text-dark">
+                    <Key size={16} className="me-2" />
+                    Code de vérification
+                  </Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={code}
+                    onChange={(e) =>
+                      setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                    }
+                    placeholder="Entrez le code à 6 chiffres"
+                    required
+                    maxLength={6}
+                    style={{
+                      borderRadius: "0.5rem",
+                      fontSize: "1.2rem",
+                      textAlign: "center",
+                      letterSpacing: "0.5rem",
+                    }}
+                  />
+                  <Form.Text className="text-muted">
+                    Code envoyé à : {email}
+                  </Form.Text>
+                </Form.Group>
+
+                <Button
+                  type="submit"
+                  disabled={isLoading || code.length !== 6}
+                  className="w-100 py-2 fw-semibold mb-2"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #000000 0%, #333333 100%)",
+                    border: "none",
+                    borderRadius: "0.5rem",
+                  }}
+                >
+                  {isLoading ? (
+                    <>
+                      <div
+                        className="spinner-border spinner-border-sm me-2"
+                        role="status"
+                        aria-hidden="true"
+                      />
+                      Vérification...
+                    </>
+                  ) : (
+                    <>
+                      <Key size={18} className="me-2" />
+                      Vérifier le code
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  variant="outline-secondary"
+                  onClick={handleBackToEmail}
+                  className="w-100"
+                  disabled={isLoading}
+                >
+                  Retour à l'email
+                </Button>
+              </Form>
+            )}
+          </Card.Body>
         </Card>
 
         {/* Footer */}
-        <div className="text-center mt-4">
-          <p className="text-white-50 small mb-0">
-            © 2025 BlazePod Admin Portal - Secure Access Required
-          </p>
-        </div>
       </Container>
     </div>
   );

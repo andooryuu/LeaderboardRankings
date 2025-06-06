@@ -1,11 +1,8 @@
 import { useState } from "react";
+import { useLanguage } from "./LanguageContext";
+import { useAuth } from "./AuthContext";
 
-// Define proper TypeScript interfaces
-interface VisualCue {
-  time: string;
-  color?: string;
-}
-
+// Keep all your existing interfaces unchanged
 interface Activity {
   activityDate: string;
   activityTime: string;
@@ -27,9 +24,7 @@ interface Activity {
   lightsOut: string;
   levels: string;
   steps: string;
-
   [key: string]: string | undefined;
-
   baseActivityType?: string;
   activityPrefix?: string;
 }
@@ -40,6 +35,8 @@ interface GroupedSession {
 }
 
 function UploadForm() {
+  const { token } = useAuth();
+  const { t, language } = useLanguage();
   const [csvData, setCsvData] = useState<Activity[]>([]);
   const [groupedData, setGroupedData] = useState<GroupedSession[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -62,25 +59,22 @@ function UploadForm() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to upload file");
+        throw new Error(t.failedToUpload);
       }
 
       const rawData: Activity[] = await response.json();
 
-      // Process the data to add baseActivityType and activityPrefix
       const processedData = rawData.map((activity) => {
         const activityName = activity.activityName || "";
         let baseActivityType = "";
         let activityPrefix = "";
 
-        // Extract the prefix (TD or EX) from the activity name
         const match = activityName.match(/^(TD|EX)/i);
 
         if (match) {
-          activityPrefix = match[1].toUpperCase(); // "TD" or "EX"
+          activityPrefix = match[1].toUpperCase();
         }
 
-        // Use the station number directly from the CSV data
         if (activity.stationNumber) {
           baseActivityType = activity.stationNumber;
         }
@@ -95,27 +89,33 @@ function UploadForm() {
       console.log("Processed Data:", processedData);
       setCsvData(processedData);
 
-      // Group activities into sessions
       const sessions = groupActivitiesIntoSessions(processedData);
       setGroupedData(sessions);
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "An error occurred while uploading the file"
-      );
+      setError(err instanceof Error ? err.message : t.uploadError);
       console.error("Upload error:", err);
     } finally {
       setLoading(false);
     }
   }
 
+  // Keep your existing groupActivitiesIntoSessions function but update session labels
   function groupActivitiesIntoSessions(
     activities: Activity[]
   ): GroupedSession[] {
+    // ... keep all your existing logic but update the session labels:
+
+    // When creating sessions, replace hardcoded strings with translations:
+    // completeSessions.push({
+    //   username: `${username} (${prefix} ${t.completeSession})`,
+    //   activities: sortedByTime,
+    // });
+
+    // ... rest of your existing function logic
+    // For brevity, I'll include the key parts that need translation updates
+
     console.log("Grouping activities:", activities);
 
-    // Filter out activities with invalid station numbers first
     const validActivities = activities.filter((activity) => {
       const sectionNumber = parseInt(activity.baseActivityType || "0");
       if (sectionNumber < 1 || sectionNumber > 3) {
@@ -124,7 +124,7 @@ function UploadForm() {
         );
         return false;
       }
-      return !!activity.activityPrefix; // Also ensure we have a valid prefix
+      return !!activity.activityPrefix;
     });
 
     console.log(
@@ -133,7 +133,6 @@ function UploadForm() {
       } invalid activities`
     );
 
-    // Group by username first
     const userActivities: { [key: string]: Activity[] } = {};
 
     validActivities.forEach((activity) => {
@@ -148,18 +147,15 @@ function UploadForm() {
 
     const completeSessions: GroupedSession[] = [];
 
-    // Process each user's activities
     Object.entries(userActivities).forEach(([username, userActs]) => {
       console.log(`Processing user: ${username}`, userActs);
 
-      // Sort activities by date and time
       const sortedActivities = userActs.sort((a, b) => {
         const timeA = new Date(`${a.activityDate} ${a.activityTime}`).getTime();
         const timeB = new Date(`${b.activityDate} ${b.activityTime}`).getTime();
         return timeA - timeB;
       });
 
-      // Group by prefix (TD or EX) and time frame
       const prefixGroups: { [key: string]: Activity[] } = {};
 
       sortedActivities.forEach((activity) => {
@@ -173,27 +169,23 @@ function UploadForm() {
 
       console.log(`Prefix groups for ${username}:`, prefixGroups);
 
-      // Find complete sessions (S1, S2, S3) within each prefix group by time proximity
       Object.entries(prefixGroups).forEach(([prefix, prefixActivities]) => {
         console.log(`Processing ${prefix} activities:`, prefixActivities);
 
-        // Group activities by time proximity (within 20 seconds of each other)
         const timeGroups: Activity[][] = [];
-        const TIME_THRESHOLD = 20 * 1000; // 20 seconds in milliseconds
+        const TIME_THRESHOLD = 20 * 1000;
 
         prefixActivities.forEach((activity) => {
           const activityTime = new Date(
             `${activity.activityDate} ${activity.activityTime}`
           ).getTime();
 
-          // Find existing time group this activity belongs to
           let foundGroup = false;
           for (const group of timeGroups) {
             const groupTime = new Date(
               `${group[0].activityDate} ${group[0].activityTime}`
             ).getTime();
 
-            // If within time threshold, add to this group
             if (Math.abs(activityTime - groupTime) <= TIME_THRESHOLD) {
               group.push(activity);
               foundGroup = true;
@@ -201,7 +193,6 @@ function UploadForm() {
             }
           }
 
-          // If no existing group found, create new one
           if (!foundGroup) {
             timeGroups.push([activity]);
           }
@@ -209,11 +200,9 @@ function UploadForm() {
 
         console.log(`Found ${timeGroups.length} time groups for ${prefix}`);
 
-        // Process each time group to find complete sessions
         timeGroups.forEach((timeGroup, groupIndex) => {
           console.log(`Processing time group ${groupIndex}:`, timeGroup);
 
-          // Check if we have all three stations (1, 2, 3)
           const stationNumbers = timeGroup.map((activity) =>
             parseInt(activity.baseActivityType || "0")
           );
@@ -223,14 +212,12 @@ function UploadForm() {
             `Stations in group: ${stationNumbers}, Unique: ${uniqueStations}`
           );
 
-          // Complete session: has stations 1, 2, and 3
           if (
             uniqueStations.length === 3 &&
             uniqueStations.includes(1) &&
             uniqueStations.includes(2) &&
             uniqueStations.includes(3)
           ) {
-            // Keep activities in chronological order (DON'T sort by station)
             const sortedByTime = timeGroup.sort((a, b) => {
               const timeA = new Date(
                 `${a.activityDate} ${a.activityTime}`
@@ -243,13 +230,10 @@ function UploadForm() {
 
             console.log(`Complete session found for ${username} (${prefix})!`);
             completeSessions.push({
-              username: `${username} (${prefix} Session)`,
-              activities: sortedByTime, // Keep chronological order
+              username: `${username} (${prefix} ${t.completeSession})`,
+              activities: sortedByTime,
             });
-          }
-          // Partial session: has 2 or more stations but not complete
-          else if (uniqueStations.length >= 2) {
-            // Keep activities in chronological order (DON'T sort by station)
+          } else if (uniqueStations.length >= 2) {
             const sortedByTime = timeGroup.sort((a, b) => {
               const timeA = new Date(
                 `${a.activityDate} ${a.activityTime}`
@@ -267,19 +251,17 @@ function UploadForm() {
             );
 
             completeSessions.push({
-              username: `${username} (${prefix} Partial Session)`,
-              activities: sortedByTime, // Keep chronological order
+              username: `${username} (${prefix} ${t.partialSession})`,
+              activities: sortedByTime,
             });
-          }
-          // Single station activity
-          else if (uniqueStations.length === 1) {
+          } else if (uniqueStations.length === 1) {
             console.log(
               `Single station activity found for ${username} (${prefix}): station ${uniqueStations[0]}`
             );
 
             completeSessions.push({
-              username: `${username} (${prefix} Single Station)`,
-              activities: timeGroup, // Already in time order
+              username: `${username} (${prefix} ${t.singleStation})`,
+              activities: timeGroup,
             });
           }
         });
@@ -292,17 +274,16 @@ function UploadForm() {
 
   async function saveCompleteSessions() {
     if (groupedData.length === 0) {
-      setError("No sessions to save");
+      setError(t.noSessionsToSave);
       return;
     }
 
-    // Filter for only complete sessions (all 3 sections)
     const completeSessions = groupedData.filter(
       (session) => session.activities.length === 3
     );
 
     if (completeSessions.length === 0) {
-      setError("No complete sessions found");
+      setError(t.noCompleteSessionsFound);
       return;
     }
 
@@ -312,28 +293,25 @@ function UploadForm() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`, // Add this line
         },
         body: JSON.stringify({ sessions: completeSessions }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to save sessions");
+        throw new Error(errorData.error || t.failedToSave);
       }
 
       const result = await response.json();
 
       if (result.success) {
-        alert(`Successfully saved ${result.savedCount} sessions!`);
+        alert(t.successfullySaved.replace("{count}", result.savedCount));
       } else {
-        setError(result.error || "Unknown error occurred");
+        setError(result.error || t.unknownError);
       }
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "An error occurred while saving sessions"
-      );
+      setError(err instanceof Error ? err.message : t.savingError);
       console.error("Save error:", err);
     } finally {
       setLoading(false);
@@ -344,7 +322,6 @@ function UploadForm() {
     <div className="container mt-4">
       <div className="row">
         <div className="col-12">
-          {/* Modern Upload UI */}
           <div className="card border-0 shadow-sm mb-4">
             <div className="card-body p-4">
               <div className="d-flex align-items-center mb-3">
@@ -376,11 +353,9 @@ function UploadForm() {
                 </div>
                 <div>
                   <h5 className="card-title mb-1" style={{ color: "#000" }}>
-                    Upload BlazePod CSV Data
+                    {t.uploadTitle}
                   </h5>
-                  <p className="text-muted mb-0 small">
-                    Select a CSV file with activity data
-                  </p>
+                  <p className="text-muted mb-0 small">{t.uploadDescription}</p>
                 </div>
               </div>
 
@@ -439,48 +414,47 @@ function UploadForm() {
                         className="spinner-border text-secondary mb-2"
                         role="status"
                       >
-                        <span className="visually-hidden">Loading...</span>
+                        <span className="visually-hidden">{t.loading}</span>
                       </div>
-                      <p className="text-muted mb-0">Processing file...</p>
+                      <p className="text-muted mb-0">{t.processing}</p>
                     </div>
                   ) : (
                     <>
-                      <h6 className="fw-semibold mb-1">Click to upload CSV</h6>
-                      <p className="text-muted small mb-0">
-                        or drag and drop file here
-                      </p>
+                      <h6 className="fw-semibold mb-1">{t.clickToUpload}</h6>
+                      <p className="text-muted small mb-0">{t.dragAndDrop}</p>
                     </>
                   )}
                 </label>
               </div>
 
               <div className="d-flex align-items-center justify-content-between small text-muted">
-                <span>Server-side CSV processing</span>
-                <span>{csvData.length} records processed</span>
+                <span>{t.serverProcessing}</span>
+                <span>
+                  {csvData.length} {t.recordsProcessed}
+                </span>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Complete Sessions Overview ONLY */}
       {groupedData.length > 0 && (
         <div className="row mb-4">
           <div className="col-12">
             <div className="card bg-dark text-light">
               <div className="card-header bg-dark d-flex justify-content-between align-items-center">
                 <h3 className="card-title mb-0 d-flex align-items-center">
-                  <span className="me-2">Sessions Overview</span>
+                  <span className="me-2">{t.sessionsOverview}</span>
                   <span className="badge bg-success">
                     {
                       groupedData.filter((g) => g.activities.length === 3)
                         .length
                     }{" "}
-                    Complete
+                    {t.complete}
                   </span>
                   <span className="badge bg-warning ms-1">
                     {groupedData.filter((g) => g.activities.length < 3).length}{" "}
-                    Partial
+                    {t.partial}
                   </span>
                 </h3>
                 {groupedData.filter((g) => g.activities.length === 3).length >
@@ -497,12 +471,12 @@ function UploadForm() {
                           role="status"
                           aria-hidden="true"
                         ></span>
-                        Saving...
+                        {t.saving}
                       </>
                     ) : (
                       <>
                         <i className="bi bi-cloud-upload me-2"></i>
-                        Save Complete Sessions (
+                        {t.saveCompleteSessions} (
                         {
                           groupedData.filter((g) => g.activities.length === 3)
                             .length
@@ -518,14 +492,14 @@ function UploadForm() {
                   <table className="table table-dark table-striped table-hover">
                     <thead>
                       <tr>
-                        <th>Session</th>
-                        <th>Type</th>
-                        <th>Status</th>
-                        <th>Activities</th>
-                        <th>Session Start</th>
-                        <th>Duration</th>
-                        <th>Hits/Misses</th>
-                        <th>Avg Reaction</th>
+                        <th>{t.session}</th>
+                        <th>{t.type}</th>
+                        <th>{t.status}</th>
+                        <th>{t.activities}</th>
+                        <th>{t.sessionStart}</th>
+                        <th>{t.duration}</th>
+                        <th>{t.hitsMisses}</th>
+                        <th>{t.avgReaction}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -553,9 +527,8 @@ function UploadForm() {
                           ) / group.activities.length;
 
                         const activityType =
-                          group.activities[0]?.activityPrefix || "Unknown";
+                          group.activities[0]?.activityPrefix || t.unknown;
 
-                        // Get session start time
                         const times = group.activities.map(
                           (activity) =>
                             new Date(
@@ -564,6 +537,29 @@ function UploadForm() {
                         );
                         const startTime = new Date(
                           Math.min(...times.map((t) => t.getTime()))
+                        );
+
+                        const dateOptions: Intl.DateTimeFormatOptions = {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        };
+
+                        const timeOptions: Intl.DateTimeFormatOptions = {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                          hour12: language === "en",
+                        };
+
+                        const formattedDate = startTime.toLocaleDateString(
+                          language === "en" ? "en-US" : "fr-FR",
+                          dateOptions
+                        );
+
+                        const formattedTime = startTime.toLocaleTimeString(
+                          language === "en" ? "en-US" : "fr-FR",
+                          timeOptions
                         );
 
                         return (
@@ -590,11 +586,11 @@ function UploadForm() {
                             <td>
                               {group.activities.length === 3 ? (
                                 <span className="badge bg-success">
-                                  Complete
+                                  {t.complete}
                                 </span>
                               ) : (
                                 <span className="badge bg-warning">
-                                  Partial ({group.activities.length}/3)
+                                  {t.partial} ({group.activities.length}/3)
                                 </span>
                               )}
                             </td>
@@ -611,18 +607,22 @@ function UploadForm() {
                             </td>
                             <td>
                               <small>
-                                {startTime.toLocaleDateString()}
+                                {formattedDate}
                                 <br />
-                                <strong>
-                                  {startTime.toLocaleTimeString()}
-                                </strong>
+                                <strong>{formattedTime}</strong>
                               </small>
                             </td>
-                            <td>{totalDuration.toFixed(1)}s</td>
+                            <td>
+                              {totalDuration.toFixed(1)}
+                              {t.seconds}
+                            </td>
                             <td>
                               {totalHits}/{totalMissHits}
                             </td>
-                            <td>{avgReactionTime.toFixed(0)}ms</td>
+                            <td>
+                              {avgReactionTime.toFixed(0)}
+                              {t.milliseconds}
+                            </td>
                           </tr>
                         );
                       })}

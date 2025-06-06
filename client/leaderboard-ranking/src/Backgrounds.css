@@ -1,0 +1,59 @@
+/* Leaderboard Background */
+.leaderboard-background {
+  background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), 
+              url('/images/hallway_image.jpg') center/cover no-repeat fixed;
+  min-height: 100vh;
+}
+/* Stats Background */
+.stats-background {
+  background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), 
+              url('/images/IMG_8246.jpg') center/cover no-repeat fixed;
+  min-height: 100vh;
+}
+
+/* Alternative backgrounds if you want different themes */
+.leaderboard-background-alt {
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.8) 0%, rgba(26, 26, 26, 0.8) 50%, rgba(51, 51, 51, 0.8) 100%), 
+              url('/images/gaming-arena.jpg') center/cover no-repeat fixed;
+  min-height: 100vh;
+}
+
+.stats-background-alt {
+  background: linear-gradient(45deg, rgba(0, 0, 0, 0.7) 0%, rgba(13, 27, 42, 0.7) 50%, rgba(27, 38, 59, 0.7) 100%), 
+              url('/images/data-visualization.jpg') center/cover no-repeat fixed;
+  min-height: 100vh;
+}
+.session-details-background {
+  background: linear-gradient(135deg, 
+    #000000 0%, 
+    #646363 25%, 
+    #000000 50%, 
+    #302f2f 75%, 
+    #000407 100%);
+  min-height: 100vh;
+  position: relative;
+}
+/* Ensure content is readable over background */
+.background-content {
+  position: relative;
+  z-index: 10;
+}
+
+/* Make cards more transparent to show background */
+.transparent-card {
+  background-color: rgba(0, 0, 0, 0.8) !important;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Table styling for better visibility */
+.transparent-table {
+  background-color: rgba(0, 0, 0, 0.7) !important;
+}
+
+.transparent-table th,
+.transparent-table td {
+  background-color: rgba(0, 0, 0, 0.6) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
