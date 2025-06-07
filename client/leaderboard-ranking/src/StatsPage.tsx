@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Clock, Target, Award, AlertCircle } from "lucide-react";
 import {
@@ -85,29 +85,6 @@ function StatsPage() {
   };
 
   // Helper function to format time
-  const formatTime = (dateString: string) => {
-    if (!dateString) return t.unknown || "Unknown";
-
-    try {
-      const date = new Date(dateString);
-
-      if (isNaN(date.getTime())) {
-        return t.unknown || "Unknown";
-      }
-
-      const options: Intl.DateTimeFormatOptions = {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      };
-
-      const locale = language === "fr" ? "fr-FR" : "en-US";
-      return date.toLocaleTimeString(locale, options);
-    } catch (error) {
-      console.error("Error formatting time:", error);
-      return t.unknown || "Unknown";
-    }
-  };
 
   useEffect(() => {
     const fetchUserData = async () => {

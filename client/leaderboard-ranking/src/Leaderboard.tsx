@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import {
   Container,
   Navbar,
-  Nav,
   Card,
   Table,
   Badge,
@@ -10,18 +9,9 @@ import {
   Alert,
   Spinner,
 } from "react-bootstrap";
-import {
-  Trophy,
-  Medal,
-  Award,
-  Home,
-  BarChart3,
-  Crown,
-  Star,
-} from "lucide-react";
+import { Trophy, Medal, Award, BarChart3, Crown, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useLanguage } from "./LanguageContext";
-import LanguageToggle from "./LanguageToggle";
 import "./Backgrounds.css";
 
 interface Activity {
@@ -62,7 +52,6 @@ interface FlattenedActivity {
 function Leaderboard() {
   const { t, language } = useLanguage();
   const [loading, setLoading] = useState(true);
-  const [userScores, setUserScores] = useState<UserScore[]>([]);
   const [activities, setActivities] = useState<{ activity_name: string }[]>([]);
   const [selectedActivity, setSelectedActivity] = useState<string>("");
   const [allActivities, setAllActivities] = useState<FlattenedActivity[]>([]);
@@ -101,30 +90,6 @@ function Leaderboard() {
       return date.toLocaleDateString(locale, options);
     } catch (error) {
       console.error("Error formatting date:", error);
-      return t.unknown || "Unknown";
-    }
-  };
-
-  const formatTime = (dateString: string) => {
-    if (!dateString) return t.unknown || "Unknown";
-
-    try {
-      const date = new Date(dateString);
-
-      if (isNaN(date.getTime())) {
-        return t.unknown || "Unknown";
-      }
-
-      const options: Intl.DateTimeFormatOptions = {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      };
-
-      const locale = language === "fr" ? "fr-FR" : "en-US";
-      return date.toLocaleTimeString(locale, options);
-    } catch (error) {
-      console.error("Error formatting time:", error);
       return t.unknown || "Unknown";
     }
   };
@@ -213,11 +178,10 @@ function Leaderboard() {
         }
 
         const data = await response.json();
-        setUserScores(data);
 
         // Extract unique activities for the filter dropdown (TD and EX only)
-        const uniqueActivities: { activity_name: string }[] = [];
         const activityNames = new Set<string>();
+        const uniqueActivities: { activity_name: string }[] = [];
 
         data.forEach((user: UserScore) => {
           user.scores.forEach((score) => {
@@ -341,7 +305,6 @@ function Leaderboard() {
               <Trophy className="me-3" size={48} />
               {t.leaderboardRanking}
             </h1>
-            <p className="lead text-light">{t.topPerformers}</p>
           </div>
 
           {/* Activity Filter */}
@@ -399,19 +362,6 @@ function Leaderboard() {
                   <tbody>
                     {displayedActivities.map((activity, index) => {
                       const rank = index + 1;
-                      let medalIcon = null;
-
-                      if (index === 0) {
-                        medalIcon = (
-                          <Award size={24} className="text-warning" />
-                        );
-                      } else if (index === 1) {
-                        medalIcon = <Award size={24} className="text-light" />;
-                      } else if (index === 2) {
-                        medalIcon = (
-                          <Award size={24} className="text-secondary" />
-                        );
-                      }
 
                       return (
                         <tr
@@ -598,7 +548,7 @@ function Leaderboard() {
         </Container>
 
         {/* Footer */}
-        <footer className="bg-transparent text-center py-4 mt-auto fixed-bottom">
+        <footer className="bg-transparent text-center py-4 mt-auto ">
           <p className="text-light mb-0">© 2025 {t.airstoftTracker}</p>
         </footer>
       </div>

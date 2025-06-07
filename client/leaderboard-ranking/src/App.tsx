@@ -9,7 +9,6 @@ import { AuthProvider, useAuth } from "./AuthContext";
 import { LanguageProvider } from "./LanguageContext.tsx";
 import AdminLogin from "./AdminLogin";
 import AdminDashboard from "./AdminDashboard";
-import Test from "./test";
 import UploadForm from "./UploadForm";
 
 // Protected route wrapper component
@@ -40,15 +39,6 @@ function App() {
                   <>
                     <NavBar />
                     <HomePage />
-                  </>
-                }
-              />
-              <Route
-                path="/test"
-                element={
-                  <>
-                    <NavBar />
-                    <Test />
                   </>
                 }
               />

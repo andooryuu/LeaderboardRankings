@@ -1,7 +1,7 @@
 import React from "react";
 import { Container, Row, Col, Button, Form, InputGroup } from "react-bootstrap";
 import { Link, useNavigate } from "react-router-dom";
-import { FaSearch, FaTrophy, FaFileUpload } from "react-icons/fa";
+import { FaSearch, FaTrophy } from "react-icons/fa";
 import { useLanguage } from "./LanguageContext";
 import LanguageToggle from "./LanguageToggle";
 import "bootstrap/dist/css/bootstrap.min.css";

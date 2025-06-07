@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Container, Navbar, Nav, Button, Card } from "react-bootstrap";
 import { LogOut, Home, Upload, Shield } from "lucide-react";
 import { useAuth } from "./AuthContext";

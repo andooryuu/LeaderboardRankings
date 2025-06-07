@@ -139,36 +139,6 @@ const SessionDetails: React.FC<SessionDetailsProps> = ({ session, onBack }) => {
     return Number(value).toFixed(decimals);
   };
 
-  // Helper function to format date and time
-  const formatDateTime = (dateString: string) => {
-    if (!dateString) return t.unknown || "Unknown";
-
-    try {
-      const date = new Date(dateString);
-
-      // Check if date is valid
-      if (isNaN(date.getTime())) {
-        return t.unknown || "Unknown";
-      }
-
-      // Format based on language
-      const options: Intl.DateTimeFormatOptions = {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false, // Use 24-hour format
-      };
-
-      const locale = language === "fr" ? "fr-FR" : "en-US";
-      return date.toLocaleString(locale, options);
-    } catch (error) {
-      console.error("Error formatting date:", error);
-      return t.unknown || "Unknown";
-    }
-  };
-
   // Helper function to format just the date
   const formatDate = (dateString: string) => {
     if (!dateString) return t.unknown || "Unknown";
@@ -193,33 +163,6 @@ const SessionDetails: React.FC<SessionDetailsProps> = ({ session, onBack }) => {
       return t.unknown || "Unknown";
     }
   };
-
-  // Helper function to format just the time
-  const formatTime = (dateString: string) => {
-    if (!dateString) return t.unknown || "Unknown";
-
-    try {
-      const date = new Date(dateString);
-
-      if (isNaN(date.getTime())) {
-        return t.unknown || "Unknown";
-      }
-
-      const options: Intl.DateTimeFormatOptions = {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      };
-
-      const locale = language === "fr" ? "fr-FR" : "en-US";
-      return date.toLocaleTimeString(locale, options);
-    } catch (error) {
-      console.error("Error formatting time:", error);
-      return t.unknown || "Unknown";
-    }
-  };
-
-  // ...existing code...
 
   const getPerformanceGrade = () => {
     const accuracy = parseFloat(calculateAccuracy());

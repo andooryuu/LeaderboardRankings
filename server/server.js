@@ -103,10 +103,10 @@ app.post("/auth/request-code", async (req, res) => {
     const mailOptions = {
       from: EMAIL_USER,
       to: email,
-      subject: "Admin Verification Code",
+      subject: "Code de vérification",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #333;">Admin Access</h2>
+          <h2 style="color: #333;">Accès Admin</h2>
           <p>Le code de vérification est:</p>
           <div style="background: #f5f5f5; padding: 20px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
             ${verificationCode}

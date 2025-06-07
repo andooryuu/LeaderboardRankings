@@ -1,13 +1,6 @@
 import { useState } from "react";
-import {
-  Container,
-  Card,
-  Form,
-  Button,
-  Alert,
-  InputGroup,
-} from "react-bootstrap";
-import { Eye, EyeOff, Shield, AlertCircle, Mail, Key } from "lucide-react";
+import { Container, Card, Form, Button, Alert } from "react-bootstrap";
+import { Shield, AlertCircle, Mail, Key } from "lucide-react";
 import { useAuth } from "./AuthContext";
 
 function AdminLogin() {
