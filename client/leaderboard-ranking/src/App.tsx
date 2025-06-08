@@ -3,27 +3,79 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "./App.css";
 import HomePage from "./Home";
 import StatsPage from "./StatsPage";
-//import LeaderboardPage from "./components/LeaderboardPage";
 import NavBar from "./NavBar";
 import Leaderboard from "./Leaderboard";
-import { Upload } from "lucide-react";
-//import Footer from "./components/Footer";
-import Test from "./test";
+import { AuthProvider, useAuth } from "./AuthContext";
+import { LanguageProvider } from "./LanguageContext.tsx";
+import AdminLogin from "./AdminLogin";
+import AdminDashboard from "./AdminDashboard";
+import UploadForm from "./UploadForm";
+
+// Protected route wrapper component
+function ProtectedAdminRoute() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  return isAuthenticated ? <AdminDashboard /> : <AdminLogin />;
+}
 
 function App() {
   return (
-    <Router>
-      <div className="app-container">
-        <NavBar />
-        <Routes>
-          {<Route path="/" element={<HomePage />} />}
-          <Route path="/test" element={<Test />} />
-          <Route path="/stats/:username" element={<StatsPage />} />
-          <Route path="/leaderboard" element={<Leaderboard />} />
-          <Route path="/upload" element={<Upload />} />
-        </Routes>
-      </div>
-    </Router>
+    <LanguageProvider>
+      <AuthProvider>
+        <Router>
+          <div className="app-container">
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  <>
+                    <NavBar />
+                    <HomePage />
+                  </>
+                }
+              />
+
+              <Route
+                path="/upload"
+                element={
+                  <>
+                    <NavBar />
+                    <UploadForm />
+                  </>
+                }
+              />
+              <Route
+                path="/stats/:username"
+                element={
+                  <>
+                    <NavBar />
+                    <StatsPage />
+                  </>
+                }
+              />
+              <Route
+                path="/leaderboard"
+                element={
+                  <>
+                    <NavBar />
+                    <Leaderboard />
+                  </>
+                }
+              />
+              <Route path="/admin" element={<ProtectedAdminRoute />} />
+            </Routes>
+          </div>
+        </Router>
+      </AuthProvider>
+    </LanguageProvider>
   );
 }
 
