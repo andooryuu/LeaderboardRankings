@@ -36,13 +36,11 @@ const transporter = nodemailer.createTransport({
     rejectUnauthorized: false,
   },
 });
-// Enable CORS
-app.use(
-  cors({
-    origin: process.env.CORS_ORIGIN,
-  })
-);
-
+const corsOptions = {
+  origin: "https://leaderboardrankings-1.onrender.com", // Replace with your Vercel URL
+  methods: "GET,POST,PUT,DELETE",
+  allowedHeaders: "Content-Type,Authorization",
+};
 // Increase payload limits for large session data
 app.use(express.json({ limit: "50mb" })); // Increase JSON payload limit
 app.use(express.urlencoded({ limit: "50mb", extended: true })); // Also increase URL-encoded limit
