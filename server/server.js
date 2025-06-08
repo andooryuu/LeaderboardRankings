@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const fileUpload = require("express-fileupload");
 const csv = require("csv-parser");
@@ -8,24 +9,21 @@ const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
 
-const JWT_SECRET = "your-super-secret-jwt-key-2024-blazepod-admin";
-const ADMIN_EMAIL = "andrew.kartsakis@outlook.com"; // Hardcoded admin email
-const EMAIL_USER = "andrewkartsakis2@gmail.com"; // Your email service
-const EMAIL_PASS = "kfew vwca vwkq ktkk"; // Your email app password
-// Configure the PostgreSQL client
-
-const verificationCodes = new Map();
+const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-key";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+const EMAIL_USER = process.env.EMAIL_USER;
+const EMAIL_PASS = process.env.EMAIL_PASS;
 
 const pool = new Pool({
-  user: "postgres.rrzipakdeywmmcmykjcc", // Replace with your Supabase database user
-  host: "aws-0-ca-central-1.pooler.supabase.com", // Replace with your Supabase database host
-  database: "postgres", // Replace with your Supabase database name
-  password: "LaZoneTracker101", // Replace with your Supabase database password
-  port: 6543, // Default PostgreSQL port
+  user: process.env.DB_USER,
+  host: process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port: process.env.DB_PORT || 6543,
 });
 
 const app = express();
-const port = 5000;
+const port = process.env.PORT || 5000;
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -39,7 +37,11 @@ const transporter = nodemailer.createTransport({
   },
 });
 // Enable CORS
-app.use(cors());
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN || "http://localhost:3000",
+  })
+);
 
 // Increase payload limits for large session data
 app.use(express.json({ limit: "50mb" })); // Increase JSON payload limit
