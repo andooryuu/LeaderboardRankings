@@ -76,7 +76,7 @@ const SessionDetails: React.FC<SessionDetailsProps> = ({ session, onBack }) => {
         setError(null);
 
         const response = await fetch(
-          `https://leaderboardrankings-serveur.onrender.com/${session.session_id}`
+          `https://leaderboardrankings-serveur.onrender.com/visualCues/${session.session_id}`
         );
 
         if (!response.ok) {

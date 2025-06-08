@@ -91,7 +91,7 @@ function StatsPage() {
       try {
         setLoading(true);
         const response = await fetch(
-          `https://leaderboardrankings-serveur.onrender.com/${username}`
+          `https://leaderboardrankings-serveur.onrender.com/stats/${username}`
         );
 
         if (!response.ok) {
