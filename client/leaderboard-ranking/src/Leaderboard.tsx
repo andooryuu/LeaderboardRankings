@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect, ChangeEvent } from "react";
 import {
   Container,
   Navbar,
@@ -123,22 +123,20 @@ function Leaderboard() {
   // Function to get best score per player per activity type (your original logic)
   const getBestScoresPerPlayer = (
     activities: FlattenedActivity[],
-    activityFilter?: string
+    activityFilter: string // Remove the optional since we always have a selection
   ) => {
-    // Filter by activity if specified
-    let filtered =
-      activityFilter && activityFilter !== "ALL"
-        ? activities.filter((item) => item.activity_name === activityFilter)
-        : activities;
+    // Filter by the specific activity (no "ALL" option)
+    let filtered = activities.filter(
+      (item) => item.activity_name === activityFilter
+    );
 
-    // Group by username and activity_name, keep only the best score
+    // Rest of your logic stays the same...
     const bestScores = new Map<string, FlattenedActivity>();
 
     filtered.forEach((activity) => {
       const key = `${activity.username}-${activity.activity_name}`;
       const existing = bestScores.get(key);
 
-      // For this scoring system, LOWER score is better (less time + fewer penalties)
       if (
         !existing ||
         activity.score < existing.score ||
@@ -152,16 +150,15 @@ function Leaderboard() {
       }
     });
 
-    // Convert back to array and sort by calculated score (LOWER is better)
     const result = Array.from(bestScores.values());
     result.sort((a, b) => {
       if (a.score !== b.score) {
-        return a.score - b.score; // Lower score is better
+        return a.score - b.score;
       }
       if (b.total_hits !== a.total_hits) {
-        return b.total_hits - a.total_hits; // More hits is better as tiebreaker
+        return b.total_hits - a.total_hits;
       }
-      return a.avg_react_time - b.avg_react_time; // Lower reaction time is better
+      return a.avg_react_time - b.avg_react_time;
     });
 
     return result;
@@ -187,7 +184,12 @@ function Leaderboard() {
 
         data.forEach((user: UserScore) => {
           user.scores.forEach((score) => {
-            if (!activityNames.has(score.activity_name)) {
+            // Filter only TD and EX activities
+            if (
+              (score.activity_name.startsWith("TD") ||
+                score.activity_name.startsWith("EX")) &&
+              !activityNames.has(score.activity_name)
+            ) {
               activityNames.add(score.activity_name);
               uniqueActivities.push({ activity_name: score.activity_name });
             }
@@ -196,8 +198,9 @@ function Leaderboard() {
 
         setActivities(uniqueActivities);
 
+        // Auto-select the FIRST activity instead of empty string
         if (uniqueActivities.length > 0) {
-          setSelectedActivity("");
+          setSelectedActivity(uniqueActivities[0].activity_name);
         }
 
         // Flatten all activities with calculated scores
@@ -205,32 +208,38 @@ function Leaderboard() {
 
         data.forEach((user: UserScore) => {
           user.scores.forEach((score) => {
-            score.activities.forEach((activity) => {
-              const sessionScore = calculateScore(
-                activity.activity_duration,
-                activity.activity_strikes,
-                activity.activity_miss_hits
-              );
+            // Only include TD and EX activities in flattened data too
+            if (
+              score.activity_name.startsWith("TD") ||
+              score.activity_name.startsWith("EX")
+            ) {
+              score.activities.forEach((activity) => {
+                const sessionScore = calculateScore(
+                  activity.activity_duration,
+                  activity.activity_strikes,
+                  activity.activity_miss_hits
+                );
 
-              flattened.push({
-                id: `${user.username}-${score.activity_name}-${activity.session_id}`,
-                username: user.username,
-                activity_name: score.activity_name,
-                activity_date: activity.activity_date,
-                activity_time: activity.activity_time,
-                duration: activity.activity_duration,
-                avg_react_time: activity.activity_avg_react_time,
-                total_hits: activity.activity_hits,
-                total_miss_hits: activity.activity_miss_hits,
-                total_strikes: activity.activity_strikes,
-                score: sessionScore,
+                flattened.push({
+                  id: `${user.username}-${score.activity_name}-${activity.session_id}`,
+                  username: user.username,
+                  activity_name: score.activity_name,
+                  activity_date: activity.activity_date,
+                  activity_time: activity.activity_time,
+                  duration: activity.activity_duration,
+                  avg_react_time: activity.activity_avg_react_time,
+                  total_hits: activity.activity_hits,
+                  total_miss_hits: activity.activity_miss_hits,
+                  total_strikes: activity.activity_strikes,
+                  score: sessionScore,
+                });
               });
-            });
+            }
           });
         });
 
         setAllActivities(flattened);
-        setDisplayedActivities(getBestScoresPerPlayer(flattened));
+        // Don't set displayed activities here, let the useEffect below handle it
       } catch (error) {
         console.error("Error fetching scores:", error);
         setError("Failed to load leaderboard data");
@@ -243,20 +252,14 @@ function Leaderboard() {
   }, []);
 
   useEffect(() => {
-    if (allActivities.length === 0) return;
+    if (allActivities.length === 0 || !selectedActivity) return;
 
     const filteredAndBest = getBestScoresPerPlayer(
       allActivities,
-      selectedActivity
+      selectedActivity // No need for fallback since we always have a selection
     );
     setDisplayedActivities(filteredAndBest);
   }, [selectedActivity, allActivities]);
-
-  const handleActivityChange = (
-    event: React.ChangeEvent<HTMLSelectElement>
-  ) => {
-    setSelectedActivity(event.target.value);
-  };
 
   if (loading) {
     return (
@@ -293,6 +296,12 @@ function Leaderboard() {
       </div>
     );
   }
+
+  const handleActivityChange = (
+    event: ChangeEvent<HTMLSelectElement>
+  ): void => {
+    setSelectedActivity(event.target.value);
+  };
 
   return (
     <div className="leaderboard-background">
