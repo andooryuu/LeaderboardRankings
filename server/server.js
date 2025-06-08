@@ -25,6 +25,8 @@ const pool = new Pool({
 const app = express();
 const port = process.env.PORT || 5000;
 
+const verificationCodes = new Map();
+
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -91,7 +93,6 @@ app.post("/auth/request-code", async (req, res) => {
         .status(403)
         .json({ error: "Email not authorized for admin access" });
     }
-    const verificationCodes = new Map();
     // Generate 6-digit verification code
     const verificationCode = crypto.randomInt(100000, 999999).toString();
 
