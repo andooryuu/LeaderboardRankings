@@ -91,12 +91,12 @@ app.post("/auth/request-code", async (req, res) => {
         .status(403)
         .json({ error: "Email not authorized for admin access" });
     }
-
+    const verificationCodes = new Map();
     // Generate 6-digit verification code
     const verificationCode = crypto.randomInt(100000, 999999).toString();
 
     // Store code with 10-minute expiration
-    verificationCode.set(email, {
+    verificationCodes.set(email, {
       code: verificationCode,
       expires: Date.now() + 10 * 60 * 1000, // 10 minutes
       attempts: 0,
