@@ -53,10 +53,13 @@ function UploadForm() {
       const formData = new FormData();
       formData.append("csv", file);
 
-      const response = await fetch("http://localhost:5000/upload", {
-        method: "POST",
-        body: formData,
-      });
+      const response = await fetch(
+        "https://leaderboardrankings-serveur.onrender.com/upload",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
 
       if (!response.ok) {
         throw new Error(t.failedToUpload);
@@ -289,14 +292,17 @@ function UploadForm() {
 
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:5000/sessions/save", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`, // Add this line
-        },
-        body: JSON.stringify({ sessions: completeSessions }),
-      });
+      const response = await fetch(
+        "https://leaderboardrankings-serveur.onrender.com/sessions/save",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ sessions: completeSessions }),
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json();

@@ -90,7 +90,9 @@ function StatsPage() {
     const fetchUserData = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`http://localhost:5000/stats/${username}`);
+        const response = await fetch(
+          `https://leaderboardrankings-serveur.onrender.com/${username}`
+        );
 
         if (!response.ok) {
           throw new Error("User not found or API error");
