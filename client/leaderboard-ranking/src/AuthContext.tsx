@@ -41,11 +41,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     if (savedToken && savedUser) {
       // Verify token with server
-      fetch("http://localhost:5000/auth/verify-token", {
-        headers: {
-          Authorization: `Bearer ${savedToken}`,
-        },
-      })
+      fetch(
+        "https://leaderboardrankings-serveur.onrender.com/auth/verify-token",
+        {
+          headers: {
+            Authorization: `Bearer ${savedToken}`,
+          },
+        }
+      )
         .then((response) => {
           if (response.ok) {
             setToken(savedToken);
@@ -72,13 +75,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const requestVerificationCode = async (email: string): Promise<boolean> => {
     try {
-      const response = await fetch("http://localhost:5000/auth/request-code", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email }),
-      });
+      const response = await fetch(
+        "https://leaderboardrankings-serveur.onrender.com/auth/request-code",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email }),
+        }
+      );
 
       return response.ok;
     } catch (error) {
@@ -89,13 +95,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const verifyCode = async (email: string, code: string) => {
     try {
-      const response = await fetch("http://localhost:5000/auth/verify-code", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, code }),
-      });
+      const response = await fetch(
+        "https://leaderboardrankings-serveur.onrender.com/auth/verify-code",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email, code }),
+        }
+      );
 
       const data = await response.json();
 
