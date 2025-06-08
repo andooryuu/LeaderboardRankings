@@ -37,7 +37,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 const corsOptions = {
-  origin: "http://localhost:5174",
+  origin: "https://lazonetracker.netlify.app",
   methods: "GET,POST,PUT,DELETE",
   allowedHeaders: "Content-Type,Authorization",
 };
