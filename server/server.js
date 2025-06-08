@@ -96,7 +96,7 @@ app.post("/auth/request-code", async (req, res) => {
     const verificationCode = crypto.randomInt(100000, 999999).toString();
 
     // Store code with 10-minute expiration
-    verificationCodes.set(email, {
+    verificationCode.set(email, {
       code: verificationCode,
       expires: Date.now() + 10 * 60 * 1000, // 10 minutes
       attempts: 0,

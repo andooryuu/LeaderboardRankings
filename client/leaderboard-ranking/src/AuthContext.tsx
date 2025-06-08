@@ -149,7 +149,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     <AuthContext.Provider
       value={{
         isAuthenticated,
-        isLoading, // Add this line
+        isLoading,
         user,
         token,
         login,
