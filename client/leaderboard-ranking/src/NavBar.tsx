@@ -11,7 +11,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { FaSearch } from "react-icons/fa";
 import { useLanguage } from "./LanguageContext";
 import LanguageToggle from "./LanguageToggle";
-import "./NavBar.css";
+import "./Navbar.css";
 
 const NavBar: React.FC = () => {
   const [searchQuery, setSearchQuery] = React.useState("");
