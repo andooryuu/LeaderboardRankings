@@ -37,7 +37,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 const corsOptions = {
-  origin: "http://localhost:5174/", // Replace with your Vercel URL
+  origin: "http://localhost:5174",
   methods: "GET,POST,PUT,DELETE",
   allowedHeaders: "Content-Type,Authorization",
 };
