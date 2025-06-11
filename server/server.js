@@ -402,21 +402,29 @@ WHERE
 app.get("/scores", async (req, res) => {
   try {
     const query = `
-      WITH IndividualActivities AS (
+      WITH SessionScores AS (
         SELECT 
           pl.username,
           s.session_id,
-          a.activity_name,
-          perf.activity_date,
-          perf.activity_time,
-          perf.activity_duration,
-          perf.activity_hits,
-          perf.activity_miss_hits,
-          perf.activity_strikes,
-          perf.activity_avg_react_time,
-          SUBSTRING(a.activity_name FROM '^[A-Z]+') as activity_type,
-          -- Calculate score for individual activity
-          (perf.activity_duration + perf.activity_miss_hits + perf.activity_strikes) as activity_score
+          MIN(perf.activity_date) as session_date,
+          MIN(perf.activity_time) as session_time,
+          SUM(perf.activity_duration) as total_duration,
+          SUM(perf.activity_hits) as total_hits,
+          SUM(perf.activity_miss_hits) as total_miss_hits,
+          SUM(perf.activity_strikes) as total_strikes,
+          -- Weighted average reaction time
+          CASE 
+            WHEN SUM(perf.activity_hits) > 0 
+            THEN ROUND(
+              SUM(perf.activity_avg_react_time * perf.activity_hits) / SUM(perf.activity_hits)
+            )
+            ELSE 0 
+          END as avg_react_time,
+          -- Get the activity type (TD or EX)
+          SUBSTRING(MIN(a.activity_name) FROM '^[A-Z]+') as activity_type,
+          COUNT(perf.session_activity_id) as activity_count,
+          -- Calculate composite score (lower is better)
+          (SUM(perf.activity_duration) + SUM(perf.activity_miss_hits) + SUM(perf.activity_strikes)) as composite_score
         FROM 
           Performance perf
         JOIN 
@@ -428,28 +436,60 @@ app.get("/scores", async (req, res) => {
         JOIN 
           Players pl ON pl.player_id = s.player_id
         WHERE 
-          a.activity_name ~ '^(TD|EX)[0-9]+$'
+          a.activity_name ~ '^(TD|EX)[0-9]+$'  -- Only TD and EX activities
+        GROUP BY 
+          pl.username, s.session_id
+        HAVING 
+          COUNT(perf.session_activity_id) = 3  -- Only complete sessions
       ),
-      RankedActivities AS (
+      UserBestScores AS (
+        SELECT 
+          username,
+          session_id,
+          session_date,
+          session_time,
+          total_duration,
+          total_hits,
+          total_miss_hits,
+          total_strikes,
+          avg_react_time,
+          activity_type,
+          activity_count,
+          composite_score,
+          -- Get each user's BEST score for each activity type
+          ROW_NUMBER() OVER (
+            PARTITION BY username, activity_type 
+            ORDER BY 
+              composite_score ASC,
+              total_hits DESC,
+              avg_react_time ASC
+          ) as user_activity_rank
+        FROM SessionScores
+      ),
+      TopScoresPerActivity AS (
         SELECT 
           *,
+          -- Rank best scores within EACH activity type separately
           ROW_NUMBER() OVER (
-            PARTITION BY activity_type 
+            PARTITION BY activity_type
             ORDER BY 
-              activity_score ASC,
-              activity_hits DESC,
-              activity_avg_react_time ASC
-          ) as activity_rank
-        FROM IndividualActivities
+              composite_score ASC,
+              total_hits DESC,
+              avg_react_time ASC
+          ) as activity_type_rank
+        FROM UserBestScores 
+        WHERE user_activity_rank = 1  -- Only each user's best score per activity type
       )
-      SELECT * FROM RankedActivities 
-      WHERE activity_rank <= 10
-      ORDER BY activity_type, activity_rank;
+      SELECT * FROM TopScoresPerActivity 
+      WHERE activity_type_rank <= 10  -- TOP 15 for EACH activity type
+      ORDER BY activity_type, activity_type_rank;
     `;
 
     const { rows } = await pool.query(query);
 
-    // Transform data (similar structure as above)
+    console.log(`Found ${rows.length} top user scores (up to 15 TD + 15 EX)`);
+
+    // Transform the data into the desired format
     const userMap = new Map();
 
     rows.forEach((row) => {
@@ -461,34 +501,42 @@ app.get("/scores", async (req, res) => {
       }
 
       const user = userMap.get(row.username);
+
+      // Find existing activity type (TD or EX) or create new one
       let activityScore = user.scores.find(
         (score) => score.activity_name === row.activity_type
       );
 
       if (!activityScore) {
         activityScore = {
-          activity_name: row.activity_type,
+          activity_name: row.activity_type, // "TD" or "EX"
           activities: [],
         };
         user.scores.push(activityScore);
       }
 
+      // Add this user's best session for this activity type
       activityScore.activities.push({
-        activity_date: row.activity_date,
-        activity_time: row.activity_time,
-        activity_duration: parseInt(row.activity_duration),
-        activity_hits: parseInt(row.activity_hits),
-        activity_miss_hits: parseInt(row.activity_miss_hits),
-        activity_avg_react_time: parseInt(row.activity_avg_react_time),
-        activity_strikes: parseInt(row.activity_strikes),
+        activity_date: row.session_date,
+        activity_time: row.session_time,
+        activity_duration: parseInt(row.total_duration),
+        activity_hits: parseInt(row.total_hits),
+        activity_miss_hits: parseInt(row.total_miss_hits),
+        activity_avg_react_time: parseInt(row.avg_react_time),
+        activity_strikes: parseInt(row.total_strikes),
         session_id: row.session_id,
-        specific_activity_name: row.activity_name,
-        activity_score: parseInt(row.activity_score),
-        activity_rank: parseInt(row.activity_rank),
+        composite_score: parseInt(row.composite_score),
+        activity_type_rank: parseInt(row.activity_type_rank), // Rank within TD or EX (1-15)
       });
     });
 
+    // Convert map to array
     const scores = Array.from(userMap.values());
+
+    console.log(
+      `Returning ${scores.length} users with top 15 scores per activity type`
+    );
+
     res.json(scores);
   } catch (err) {
     console.error("Error:", err);
