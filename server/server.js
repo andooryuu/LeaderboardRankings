@@ -398,13 +398,10 @@ WHERE
 });
 
 // Endpoint to get scores from multiple tables - SESSION LEVEL DATA (AGGREGATED)
-// ...existing code...
-
-// Endpoint to get scores from multiple tables - SESSION LEVEL DATA (AGGREGATED)
 app.get("/scores", async (req, res) => {
   try {
     const query = `
-      SELECT 
+            SELECT 
         pl.username,
         s.session_id,
         MIN(perf.activity_date) as session_date,
@@ -413,7 +410,6 @@ app.get("/scores", async (req, res) => {
         SUM(perf.activity_hits) as total_hits,
         SUM(perf.activity_miss_hits) as total_miss_hits,
         SUM(perf.activity_strikes) as total_strikes,
-        -- Weighted average reaction time (fixed calculation)
         CASE 
           WHEN SUM(perf.activity_hits) > 0 
           THEN ROUND(
@@ -421,10 +417,10 @@ app.get("/scores", async (req, res) => {
           )
           ELSE 0 
         END as avg_react_time,
-        -- Get the activity type (TD or EX) from the first activity
         SUBSTRING(MIN(a.activity_name) FROM '^[A-Z]+') as activity_type,
-        -- Count activities per session to ensure complete sessions
-        COUNT(perf.session_activity_id) as activity_count
+        COUNT(perf.session_activity_id) as activity_count,
+        -- Calculate a composite score (lower is better)
+        (SUM(perf.activity_duration) + SUM(perf.activity_miss_hits) + SUM(perf.activity_strikes)) as total_score
       FROM 
         Performance perf
       JOIN 
@@ -438,9 +434,10 @@ app.get("/scores", async (req, res) => {
       GROUP BY 
         pl.username, s.session_id
       HAVING 
-        COUNT(perf.session_activity_id) = 3  -- Only complete sessions (3 activities)
+        COUNT(perf.session_activity_id) = 3
       ORDER BY 
-        pl.username, s.session_id;
+        total_score ASC  -- Best scores first (lowest is better)
+      LIMIT 10;
     `;
 
     const { rows } = await pool.query(query);
