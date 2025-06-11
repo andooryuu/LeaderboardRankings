@@ -209,7 +209,9 @@ const SessionDetails: React.FC<SessionDetailsProps> = ({ session, onBack }) => {
                       <span className="text-secondary">
                         {t.activityDate || "Date"}:{" "}
                       </span>
-                      <span>{session.session_date || t.unknown}</span>
+                      <span>
+                        {formatDate(session.session_date) || t.unknown}
+                      </span>
                     </div>
                     <div className="mb-2">
                       <span className="text-secondary">
