@@ -399,57 +399,96 @@ WHERE
 
 // Endpoint to get scores from multiple tables - SESSION LEVEL DATA (AGGREGATED)
 // Endpoint to get TOP 10 scores from multiple tables - SESSION LEVEL DATA (AGGREGATED)
+// Endpoint to get TOP 10 PLAYERS (unique usernames) with their best sessions
 app.get("/scores", async (req, res) => {
   try {
     const query = `
-      SELECT 
-        pl.username,
-        s.session_id,
-        MIN(perf.activity_date) as session_date,
-        MIN(perf.activity_time) as session_time,
-        SUM(perf.activity_duration) as total_duration,
-        SUM(perf.activity_hits) as total_hits,
-        SUM(perf.activity_miss_hits) as total_miss_hits,
-        SUM(perf.activity_strikes) as total_strikes,
-        -- Weighted average reaction time (fixed calculation)
-        CASE 
-          WHEN SUM(perf.activity_hits) > 0 
-          THEN ROUND(
-            SUM(perf.activity_avg_react_time * perf.activity_hits) / SUM(perf.activity_hits)
-          )
-          ELSE 0 
-        END as avg_react_time,
-        -- Get the activity type (TD or EX) from the first activity
-        SUBSTRING(MIN(a.activity_name) FROM '^[A-Z]+') as activity_type,
-        -- Count activities per session to ensure complete sessions
-        COUNT(perf.session_activity_id) as activity_count,
-        -- Calculate composite score (lower is better - duration + misses + strikes)
-        (SUM(perf.activity_duration) + SUM(perf.activity_miss_hits) + SUM(perf.activity_strikes)) as composite_score
-      FROM 
-        Performance perf
-      JOIN 
-        Session_Activity sa ON perf.session_activity_id = sa.session_activity_id
-      JOIN    
-        Activity a ON a.activity_id = sa.activity_id
-      JOIN 
-        Session s ON sa.session_id = s.session_id
-      JOIN 
-        Players pl ON pl.player_id = s.player_id
-      GROUP BY 
-        pl.username, s.session_id
-      HAVING 
-        COUNT(perf.session_activity_id) = 3  -- Only complete sessions (3 activities)
-      ORDER BY 
-  avg_react_time ASC,
-  SUM(perf.activity_hits) DESC
-LIMIT 10;
+      WITH PlayerBestScores AS (
+        SELECT 
+          pl.username,
+          s.session_id,
+          MIN(perf.activity_date) as session_date,
+          MIN(perf.activity_time) as session_time,
+          SUM(perf.activity_duration) as total_duration,
+          SUM(perf.activity_hits) as total_hits,
+          SUM(perf.activity_miss_hits) as total_miss_hits,
+          SUM(perf.activity_strikes) as total_strikes,
+          -- Weighted average reaction time
+          CASE 
+            WHEN SUM(perf.activity_hits) > 0 
+            THEN ROUND(
+              SUM(perf.activity_avg_react_time * perf.activity_hits) / SUM(perf.activity_hits)
+            )
+            ELSE 0 
+          END as avg_react_time,
+          -- Get the activity type (TD or EX)
+          SUBSTRING(MIN(a.activity_name) FROM '^[A-Z]+') as activity_type,
+          COUNT(perf.session_activity_id) as activity_count,
+          -- Calculate composite score (lower is better)
+          (SUM(perf.activity_duration) + SUM(perf.activity_miss_hits) + SUM(perf.activity_strikes)) as composite_score,
+          -- Rank sessions within each player (best session first)
+          ROW_NUMBER() OVER (
+            PARTITION BY pl.username 
+            ORDER BY 
+              (SUM(perf.activity_duration) + SUM(perf.activity_miss_hits) + SUM(perf.activity_strikes)) ASC,
+              SUM(perf.activity_hits) DESC,
+              CASE 
+                WHEN SUM(perf.activity_hits) > 0 
+                THEN ROUND(SUM(perf.activity_avg_react_time * perf.activity_hits) / SUM(perf.activity_hits))
+                ELSE 999999 
+              END ASC
+          ) as player_rank
+        FROM 
+          Performance perf
+        JOIN 
+          Session_Activity sa ON perf.session_activity_id = sa.session_activity_id
+        JOIN    
+          Activity a ON a.activity_id = sa.activity_id
+        JOIN 
+          Session s ON sa.session_id = s.session_id
+        JOIN 
+          Players pl ON pl.player_id = s.player_id
+        WHERE 
+          a.activity_name ~ '^(TD|EX)[0-9]+$'  -- Only TD and EX activities
+        GROUP BY 
+          pl.username, s.session_id
+        HAVING 
+          COUNT(perf.session_activity_id) = 3  -- Only complete sessions
+      ),
+      TopPlayers AS (
+        SELECT 
+          username,
+          session_id,
+          session_date,
+          session_time,
+          total_duration,
+          total_hits,
+          total_miss_hits,
+          total_strikes,
+          avg_react_time,
+          activity_type,
+          activity_count,
+          composite_score,
+          -- Rank players globally by their best score
+          ROW_NUMBER() OVER (
+            ORDER BY 
+              composite_score ASC,
+              total_hits DESC,
+              avg_react_time ASC
+          ) as global_rank
+        FROM PlayerBestScores 
+        WHERE player_rank = 1  -- Only each player's best session
+      )
+      SELECT * FROM TopPlayers 
+      WHERE global_rank <= 10  -- TOP 10 PLAYERS ONLY
+      ORDER BY global_rank;
     `;
 
     const { rows } = await pool.query(query);
 
-    console.log(`Returning top ${rows.length} sessions`); // Debug log
+    console.log(`Returning top ${rows.length} players`); // Debug log
 
-    // Transform the data into the desired format - group by username and activity type
+    // Transform the data into the desired format
     const userMap = new Map();
 
     rows.forEach((row) => {
@@ -469,13 +508,13 @@ LIMIT 10;
 
       if (!activityScore) {
         activityScore = {
-          activity_name: row.activity_type, // This will be "TD" or "EX"
+          activity_name: row.activity_type, // "TD" or "EX"
           activities: [],
         };
         user.scores.push(activityScore);
       }
 
-      // Add this session's aggregated data
+      // Add this player's best session data
       activityScore.activities.push({
         activity_date: row.session_date,
         activity_time: row.session_time,
@@ -485,16 +524,15 @@ LIMIT 10;
         activity_avg_react_time: parseInt(row.avg_react_time),
         activity_strikes: parseInt(row.total_strikes),
         session_id: row.session_id,
-        composite_score: parseInt(row.composite_score), // Add ranking score for debugging
+        composite_score: parseInt(row.composite_score),
+        global_rank: parseInt(row.global_rank), // Add rank for debugging/display
       });
     });
 
     // Convert map to array
     const scores = Array.from(userMap.values());
 
-    console.log(
-      `Transformed into ${scores.length} unique players with top sessions`
-    );
+    console.log(`Transformed into ${scores.length} unique TOP PLAYERS`);
 
     res.json(scores);
   } catch (err) {
