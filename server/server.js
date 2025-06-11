@@ -440,10 +440,9 @@ app.get("/scores", async (req, res) => {
       HAVING 
         COUNT(perf.session_activity_id) = 3  -- Only complete sessions (3 activities)
       ORDER BY 
-        composite_score ASC,  -- Best scores first (lowest composite score)
-        SUM(perf.activity_hits) DESC,  -- Then by highest hits
-        avg_react_time ASC     -- Then by fastest reaction time
-      LIMIT 10;  -- TOP 10 SESSIONS ONLY
+  avg_react_time ASC,
+  SUM(perf.activity_hits) DESC
+LIMIT 10;
     `;
 
     const { rows } = await pool.query(query);
