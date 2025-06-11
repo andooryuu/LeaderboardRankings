@@ -398,56 +398,58 @@ WHERE
 });
 
 // Endpoint to get scores from multiple tables - SESSION LEVEL DATA (AGGREGATED)
-// ...existing code...
-
-// Endpoint to get scores from multiple tables - SESSION LEVEL DATA (AGGREGATED)
+// Alternative version - Top 10 individual activities for each type
 app.get("/scores", async (req, res) => {
   try {
     const query = `
-      SELECT 
-        pl.username,
-        s.session_id,
-        MIN(perf.activity_date) as session_date,
-        MIN(perf.activity_time) as session_time,
-        SUM(perf.activity_duration) as total_duration,
-        SUM(perf.activity_hits) as total_hits,
-        SUM(perf.activity_miss_hits) as total_miss_hits,
-        SUM(perf.activity_strikes) as total_strikes,
-        -- Weighted average reaction time (fixed calculation)
-        CASE 
-          WHEN SUM(perf.activity_hits) > 0 
-          THEN ROUND(
-            SUM(perf.activity_avg_react_time * perf.activity_hits) / SUM(perf.activity_hits)
-          )
-          ELSE 0 
-        END as avg_react_time,
-        -- Get the activity type (TD or EX) from the first activity
-        SUBSTRING(MIN(a.activity_name) FROM '^[A-Z]+') as activity_type,
-        -- Count activities per session to ensure complete sessions
-        COUNT(perf.session_activity_id) as activity_count
-      FROM 
-        Performance perf
-      JOIN 
-        Session_Activity sa ON perf.session_activity_id = sa.session_activity_id
-      JOIN    
-        Activity a ON a.activity_id = sa.activity_id
-      JOIN 
-        Session s ON sa.session_id = s.session_id
-      JOIN 
-        Players pl ON pl.player_id = s.player_id
-      GROUP BY 
-        pl.username, s.session_id
-      HAVING 
-        COUNT(perf.session_activity_id) = 3  -- Only complete sessions (3 activities)
-      ORDER BY 
-        pl.username, s.session_id;
+      WITH IndividualActivities AS (
+        SELECT 
+          pl.username,
+          s.session_id,
+          a.activity_name,
+          perf.activity_date,
+          perf.activity_time,
+          perf.activity_duration,
+          perf.activity_hits,
+          perf.activity_miss_hits,
+          perf.activity_strikes,
+          perf.activity_avg_react_time,
+          SUBSTRING(a.activity_name FROM '^[A-Z]+') as activity_type,
+          -- Calculate score for individual activity
+          (perf.activity_duration + perf.activity_miss_hits + perf.activity_strikes) as activity_score
+        FROM 
+          Performance perf
+        JOIN 
+          Session_Activity sa ON perf.session_activity_id = sa.session_activity_id
+        JOIN    
+          Activity a ON a.activity_id = sa.activity_id
+        JOIN 
+          Session s ON sa.session_id = s.session_id
+        JOIN 
+          Players pl ON pl.player_id = s.player_id
+        WHERE 
+          a.activity_name ~ '^(TD|EX)[0-9]+$'
+      ),
+      RankedActivities AS (
+        SELECT 
+          *,
+          ROW_NUMBER() OVER (
+            PARTITION BY activity_type 
+            ORDER BY 
+              activity_score ASC,
+              activity_hits DESC,
+              activity_avg_react_time ASC
+          ) as activity_rank
+        FROM IndividualActivities
+      )
+      SELECT * FROM RankedActivities 
+      WHERE activity_rank <= 10
+      ORDER BY activity_type, activity_rank;
     `;
 
     const { rows } = await pool.query(query);
 
-    console.log("Sample row from database:", rows[0]); // Debug log
-
-    // Transform the data into the desired format - group by username and activity type
+    // Transform data (similar structure as above)
     const userMap = new Map();
 
     rows.forEach((row) => {
@@ -459,38 +461,34 @@ app.get("/scores", async (req, res) => {
       }
 
       const user = userMap.get(row.username);
-
-      // Find existing activity type (TD or EX) or create new one
       let activityScore = user.scores.find(
         (score) => score.activity_name === row.activity_type
       );
 
       if (!activityScore) {
         activityScore = {
-          activity_name: row.activity_type, // This will be "TD" or "EX"
+          activity_name: row.activity_type,
           activities: [],
         };
         user.scores.push(activityScore);
       }
 
-      // Add this session's aggregated data
       activityScore.activities.push({
-        activity_date: row.session_date,
-        activity_time: row.session_time,
-        activity_duration: parseInt(row.total_duration), // Ensure it's an integer
-        activity_hits: parseInt(row.total_hits),
-        activity_miss_hits: parseInt(row.total_miss_hits),
-        activity_avg_react_time: parseInt(row.avg_react_time),
-        activity_strikes: parseInt(row.total_strikes),
+        activity_date: row.activity_date,
+        activity_time: row.activity_time,
+        activity_duration: parseInt(row.activity_duration),
+        activity_hits: parseInt(row.activity_hits),
+        activity_miss_hits: parseInt(row.activity_miss_hits),
+        activity_avg_react_time: parseInt(row.activity_avg_react_time),
+        activity_strikes: parseInt(row.activity_strikes),
         session_id: row.session_id,
+        specific_activity_name: row.activity_name,
+        activity_score: parseInt(row.activity_score),
+        activity_rank: parseInt(row.activity_rank),
       });
     });
 
-    // Convert map to array
     const scores = Array.from(userMap.values());
-
-    console.log("Sample transformed data:", JSON.stringify(scores[0], null, 2)); // Debug log
-
     res.json(scores);
   } catch (err) {
     console.error("Error:", err);
